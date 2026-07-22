@@ -17,10 +17,18 @@ React と Three.js で制作された、3Dボードゲーム「クアルト！�
 - **高さ**: 高い または 低い
 - **穴**: 穴あり または 穴なし
 
+## 📱 PWA対応
+本アプリはPWA (Progressive Web App) に対応しています。
+- Chrome・Edge などのブラウザから **「アプリとしてインストール」** できます（アドレスバーのインストールアイコン、またはメニューの「アプリをインストール」）。
+- スマートフォンでは「ホーム画面に追加」でアプリのように起動できます。
+- 一度読み込めばオフラインでもプレイできます（Service Workerによるキャッシュ）。
+- スマートフォン・タブレットの縦持ち／横持ちどちらでも、盤面が大きく見えるようレイアウトが自動で切り替わります。
+
 ## 🛠 使用技術 (Tech Stack)
 - **Frontend**: React (Vite)
 - **3D Engine**: Three.js
 - **UI/UX**: Tailwind CSS, SweetAlert2, Canvas-confetti
+- **PWA**: vite-plugin-pwa (Workbox)
 - **Deployment**: GitHub Pages
 
 ## 📦 開発環境のセットアップ (Development)
@@ -32,11 +40,21 @@ npm install
 # ローカル開発サーバーの起動
 npm run dev
 
+# コードチェック
+npm run lint
+
 # 本番用ビルド
 npm run build
 
 # GitHub Pagesへのデプロイ
 npm run deploy
+```
+
+### PWAアイコンの再生成
+`public/favicon.png` (1024x1024) を差し替えた場合は、以下でPWA用アイコンを再生成できます。
+
+```bash
+node scripts/generate-icons.mjs
 ```
 
 ## ✒️ 作者
