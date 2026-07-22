@@ -29,7 +29,7 @@ React と Three.js で制作された、3Dボードゲーム「クアルト！�
 - **3D Engine**: Three.js
 - **UI/UX**: Tailwind CSS, SweetAlert2, Canvas-confetti
 - **PWA**: vite-plugin-pwa (Workbox)
-- **Deployment**: GitHub Pages
+- **Deployment**: GitHub Actions → GitHub Pages
 
 ## 📦 開発環境のセットアップ (Development)
 
@@ -45,10 +45,17 @@ npm run lint
 
 # 本番用ビルド
 npm run build
-
-# GitHub Pagesへのデプロイ
-npm run deploy
 ```
+
+## 🚢 デプロイ (Deployment)
+`main` ブランチにプッシュすると、GitHub Actions (`.github/workflows/deploy.yml`) が
+自動でビルドして GitHub Pages にデプロイします。
+
+> **注意**: リポジトリの Settings → Pages → 「Build and deployment」の Source が
+> **「GitHub Actions」** になっている必要があります。
+> （「Deploy from a branch」のままだと、ビルド前のソースがそのまま配信されて動きません）
+
+手動でデプロイしたい場合は `npm run deploy` (gh-pages ブランチへのビルド済み成果物の公開) も利用できます。
 
 ### PWAアイコンの再生成
 `public/favicon.png` (1024x1024) を差し替えた場合は、以下でPWA用アイコンを再生成できます。
