@@ -1,2 +1,55 @@
-/* Tailwind CSS or base styles can go here if needed */
-/* The current App.jsx has its own <style> tag, so this can be empty for now */
+@import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  overscroll-behavior: none;
+}
+
+.font-zen-maru {
+  font-family: 'Zen Maru Gothic', sans-serif;
+}
+
+ruby { ruby-position: over; }
+rt {
+  font-size: 0.65em;
+  color: #8d6e63;
+  font-weight: 500;
+}
+
+/* パクパクゴブレット風 ポップボタンアニメーション */
+.pop-btn {
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.pop-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.15);
+}
+.pop-btn:active {
+  transform: scale(0.92);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* ノッチ端末・PWAスタンドアロン表示でのセーフエリア確保 */
+.safe-top { padding-top: env(safe-area-inset-top); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
+/* 高さの低い横画面（スマホ横持ち）では、盤面を隠さないよう
+   パネルを左下にコンパクトに寄せ、フッターを隠す */
+@media (orientation: landscape) and (max-height: 520px) {
+  .turn-panel-wrap {
+    justify-content: flex-start;
+  }
+  .turn-panel {
+    max-width: 15rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  .app-footer {
+    display: none;
+  }
+}
