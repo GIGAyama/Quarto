@@ -72,6 +72,17 @@ export const checks = [
     }
   },
   {
+    id: 'A6_TESTS_EXIST',
+    phase: 'P4',
+    title: '中核ロジックのテストが少なくとも1つある',
+    run: (c) => {
+      // `npm test`（node --test）は、対象のファイルが1つも無くても 0 で終わる。
+      // テストが消えたことに CI が気づけないので、ここで存在を見る。
+      const t = c.list('.test.js').filter((f) => f.startsWith('tests/'));
+      return t.length ? ok(`${t.length} ファイル`) : ng('tests/ に *.test.js が無い');
+    }
+  },
+  {
     id: 'A5_CI_ON_PR',
     phase: 'P0',
     title: 'CI が pull_request でも動く',

@@ -84,6 +84,7 @@ const BREAKAGE = {
   A2_GITIGNORE: (o) => ({ ...o, text: (p) => (p === '.gitignore' ? 'node_modules/\n' : o.text(p)) }),
   A3_DEPENDABOT: (o) => ({ ...o, has: (p) => (p === '.github/dependabot.yml' ? false : o.has(p)) }),
   A4_DOCS: (o) => ({ ...o, has: (p) => (p === 'MANUAL.md' ? false : o.has(p)) }),
+  A6_TESTS_EXIST: (o) => ({ ...o, list: (g) => (g === '.test.js' ? [] : o.list(g)) }),
   A5_CI_ON_PR: (o) => ({
     ...o,
     text: (p) => (p.startsWith('.github/workflows/') ? 'on:\n  push:\n    branches: [main]\n' : o.text(p))

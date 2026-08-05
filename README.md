@@ -80,6 +80,7 @@ Playwright を `devDependencies` に入れていないのは、授業で使う�
 | ファイル | 役割 |
 |---|---|
 | `src/game.js` | 盤面と勝敗判定。画面にも three.js にも依存しない（ここだけテストがある） |
+| `tests/*.test.js` | `npm test`（`node --test`）が拾うテスト。この名前で置く |
 | `src/App.jsx` | 3D エンジンと画面 |
 | `src/pwa.js` | Service Worker の登録と「あたらしい ばん が あります」のお知らせ |
 | `src/sw.js` | Service Worker 本体（`injectManifest` でビルドされる） |
