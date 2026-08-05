@@ -43,9 +43,61 @@ npm run dev
 # コードチェック
 npm run lint
 
+# 中核ロジック（勝敗判定）のテスト
+npm test
+
 # 本番用ビルド
 npm run build
+
+# 静的な品質ゲート（GIGA Standard v5 Part I）
+npm run check
+
+# 品質ゲートそのものが動いているかを、わざと壊して確かめる
+npm run check:self
 ```
+
+`npm run lint` → `npm test` → `npm run build` → `npm run check` は
+`.github/workflows/ci.yml` が **push と pull_request の両方で**回します。
+
+## 🔬 実ブラウザでの実測
+
+読むだけでは分からないもの（コントラスト・タップ領域・CSP違反・Service Worker の挙動）は、
+実際にブラウザで開いて測ります。測り方と実測値は [AUDIT.md](./AUDIT.md) にあります。
+
+```bash
+npm run build
+npm run serve:dist &     # dist/ を本番と同じ /Quarto/ の下で配る
+npm i -D playwright      # ← 依存には入れていない。測るときだけ入れる
+npm run measure          # 表示・コントラスト・タップ・CSP・SW・オフライン
+npm run measure:update   # 更新が「押すまで切り替わらない」ことの確認
+```
+
+Playwright を `devDependencies` に入れていないのは、授業で使うアプリの `npm ci` を
+重くしたくないためです。
+
+## 🏗 このリポジトリの作り
+
+| ファイル | 役割 |
+|---|---|
+| `src/game.js` | 盤面と勝敗判定。画面にも three.js にも依存しない（ここだけテストがある） |
+| `src/App.jsx` | 3D エンジンと画面 |
+| `src/pwa.js` | Service Worker の登録と「あたらしい ばん が あります」のお知らせ |
+| `src/sw.js` | Service Worker 本体（`injectManifest` でビルドされる） |
+| `public/install-hook.js` | `beforeinstallprompt` の捕捉。`<head>` の先頭で同期読み込みする |
+| `public/offline.html` | 圏外で本体の控えも無いときに出る画面。外部資産にも JS にも頼らない |
+| `assets/icon-master.png` | アイコンの原本（1024×1024）。**配布物には含めない** |
+| `scripts/check-project.mjs` | 品質ゲート |
+| `tools/measure*.mjs` | 実ブラウザでの実測 |
+
+### 手を入れるときの注意
+
+- **CSP を入れてあります。** インラインの `<script>` と `onclick=` は動きません。
+  イベントは `addEventListener` で繋いでください。
+- **`src/sw.js` を直したら `APP_VERSION` を上げ、`quality.config.json` の
+  `appVersion` も合わせてください。** ずれていると `npm run check` が落ちます。
+- **アイコンの色や大きさの上限は `quality.config.json` にあります。**
+- 検査を足したときは、`scripts/check-project.mjs` の `BREAKAGE` に
+  「わざと壊した入力」も足してください。壊しても落ちない検査は、何も見ていないのと同じです。
 
 ## 🚢 デプロイ (Deployment)
 `main` ブランチにプッシュすると、GitHub Actions (`.github/workflows/deploy.yml`) が
@@ -58,11 +110,25 @@ npm run build
 手動でデプロイしたい場合は `npm run deploy` (gh-pages ブランチへのビルド済み成果物の公開) も利用できます。
 
 ### PWAアイコンの再生成
-`public/favicon.png` (1024x1024) を差し替えた場合は、以下でPWA用アイコンを再生成できます。
+原本は `assets/icon-master.png` (1024×1024) です。差し替えたら次を走らせてください。
 
 ```bash
-node scripts/generate-icons.mjs
+npm run icons
 ```
+
+`public/` に置かれる6種類（favicon / 192 / 512 / apple-touch-icon / maskable 192・512）が
+パレット PNG で作り直されます。合計 **42.3 KB** です。
+
+- `apple-touch-icon` は**透明を含みません**。iOS は透明を黒で埋めるため、
+  透明のある画像を指すとホーム画面でアイコンの四隅が黒く出ます。
+- maskable は下地を端まで伸ばしてあります（余白を残すと、欠けはしないが縮んで見えます）。
+  セーフゾーン外の中身は 512 で 0.012%、192 で 0.024% です。
+
+## 📋 品質基準
+
+このリポジトリは **GIGA Standard v5** に沿って作られています。
+実測値・満たしていない項目・**測っていないもの**は [AUDIT.md](./AUDIT.md) に全部書いてあります。
+先生向けの使い方は [MANUAL.md](./MANUAL.md) です。
 
 ## ✒️ 作者
 [GIGA山](https://note.com/cute_borage86)
