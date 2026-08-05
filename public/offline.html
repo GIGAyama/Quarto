@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#ffca28" />
+    <title>インターネットに つながっていません｜GIGAクアルト！</title>
+    <!--
+      この画面は「ネットにつながらず、アプリ本体も手元にない」ときに出る。
+      外部の資産にも JavaScript にも頼らない。文字も色も自前で持ち、
+      読み込み直しは <a href> で行う（インラインの onclick は CSP に引っかかる）。
+    -->
+    <style>
+      :root { color-scheme: light; }
+      * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+      html, body {
+        height: 100dvh;
+        margin: 0;
+      }
+      @supports not (height: 100dvh) {
+        html, body { height: 100vh; }
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1.25rem;
+        padding: calc(1.5rem + env(safe-area-inset-top, 0px))
+                 calc(1.5rem + env(safe-area-inset-right, 0px))
+                 calc(1.5rem + env(safe-area-inset-bottom, 0px))
+                 calc(1.5rem + env(safe-area-inset-left, 0px));
+        text-align: center;
+        color: #5d4037;
+        font-family: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', 'Yu Gothic UI',
+                     'Hiragino Kaku Gothic ProN', 'Noto Sans JP', system-ui, sans-serif;
+        font-size: clamp(14px, 1.6vw + 9px, 18px);
+        line-height: 1.8;
+        /* アプリ本体と同じ「黄色い水玉」の下地にして、別のサイトに来たと思わせない */
+        background-color: #fff9c4;
+        background-image: radial-gradient(#ffe082 20%, transparent 20%),
+                          radial-gradient(#ffe082 20%, transparent 20%);
+        background-position: 0 0, 25px 25px;
+        background-size: 50px 50px;
+      }
+      .card {
+        max-width: 30rem;
+        width: 100%;
+        padding: 1.75rem 1.5rem;
+        border: 5px solid #ffca28;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.92);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+      }
+      h1 {
+        margin: 0 0 0.75rem;
+        font-size: clamp(18px, 3.2vw + 10px, 30px);
+        color: #1967d2;   /* 白地で 5.2:1 */
+      }
+      p { margin: 0.5rem 0; }
+      .hint { color: #6d4c41; font-size: clamp(12px, 1.0vw + 9px, 14px); }
+      .reload {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;      /* 指で押せる大きさ */
+        min-width: 12rem;
+        margin-top: 1rem;
+        padding: 0 1.5rem;
+        border-radius: 999px;
+        background: #1967d2;   /* 白抜き文字で 5.2:1 */
+        color: #ffffff;
+        font-weight: 700;
+        text-decoration: none;
+      }
+      .emoji { font-size: 3rem; line-height: 1; }
+      @media (forced-colors: active) {
+        .card, .reload { border: 2px solid CanvasText; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <p class="emoji" aria-hidden="true">📡</p>
+      <h1>いま インターネットに つながっていません</h1>
+      <p>Wi-Fi が つながってから、もういちど ひらいてね。</p>
+      <p class="hint">
+        いちど あそんだことが あれば、つながっていなくても あそべます。
+      </p>
+      <p><a class="reload" href="./">もういちど ひらく</a></p>
+    </div>
+  </body>
+</html>

@@ -2,11 +2,61 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!--
+      Content-Security-Policy
+
+      ・script-src 'self' … 本体は Vite が外部ファイルへ切り出すので満たせる。
+        インラインの <script> や onclick= を足すと、この指定のせいで黙って動かなくなる。
+        'unsafe-inline' で解決してはいけない（CSP を入れた意味がほとんど無くなる）。
+      ・style-src に 'unsafe-inline' が要る … SweetAlert2 が実行時に <style> を差し込むため。
+      ・fonts.googleapis.com / fonts.gstatic.com … 表示用の Web フォント（§2-7）。
+        塞がれても端末側のフォントに落ちるだけでアプリは動く。
+      ・connect-src 'self' … このアプリは外部に一切通信しない。
+
+      frame-ancestors はここには書かない。<meta> で配ると無視され、
+      読み込みのたびにコンソールへ警告が出るだけになる。
+      他サイトへの埋め込みを止めるには HTTP ヘッダーが要るが GitHub Pages では足せない。
+      独自ドメインや CDN を挟むときに、そちら側で frame-ancestors 'none' を設定すること。
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+        default-src 'self';
+        script-src 'self';
+        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+        font-src 'self' https://fonts.gstatic.com;
+        img-src 'self' data: blob:;
+        connect-src 'self';
+        worker-src 'self';
+        manifest-src 'self';
+        object-src 'none';
+        base-uri 'self';
+        form-action 'self';
+      "
+    />
+
+    <!--
+      インストールの合図を「いちばん先に」受け取る。
+      Chrome は条件が揃うと即座に beforeinstallprompt を出すため、
+      React や three.js の読み込みより後だと合図を取りこぼし、
+      通信が遅い端末で「インストール」ボタンが出なくなる。
+    -->
+    <script src="/Quarto/install-hook.js"></script>
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="3Dボードゲーム「クアルト！」のWebアプリ版。属性を4つそろえて勝負！" />
     <meta name="theme-color" content="#ffca28" />
+    <meta name="color-scheme" content="light" />
+
+    <link rel="icon" type="image/png" href="/Quarto/favicon.png" />
+    <!--
+      apple-touch-icon には透明を含む画像を指さない。
+      iOS は透明部分を黒で埋めるため、ホーム画面でアイコンの四隅だけが黒く出る。
+      この画像は scripts/generate-icons.mjs が下地 #fff9c4 で塗りつぶして作る。
+    -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/Quarto/apple-touch-icon.png" />
+
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
