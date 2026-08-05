@@ -1,0 +1,27 @@
+{
+  "repoName": "Quarto",
+  "repoBasePath": "/Quarto/",
+  "appVersion": "v2",
+  "swSource": "src/sw.js",
+  "offlineHtml": "public/offline.html",
+
+  "icons": {
+    "appleTouchIcon": "public/apple-touch-icon.png",
+    "maxKB": {
+      "public/favicon.png": 30,
+      "public/apple-touch-icon.png": 60,
+      "public/pwa-192x192.png": 60,
+      "public/pwa-512x512.png": 60,
+      "public/maskable-192x192.png": 60,
+      "public/maskable-512x512.png": 60
+    }
+  },
+
+  "performance": {
+    "initialJsKB": 300
+  },
+
+  "knownDeviations": {
+    "P3_INITIAL_JS": "3D 盤面に three.js を使っており、three だけで 451KB ある。GIGA Standard v5 §8 の 300KB は満たせない。gzip 後は 196KB。CDN からは 1バイトも取っておらず、すべて自己ホストしたうえで先読みキャッシュに入れてあるため、初回以降は通信が発生しない。three を外すには 3D をやめる（アプリの作り替え）しかないため、人間の判断に委ねる。"
+  }
+}
