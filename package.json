@@ -10,7 +10,14 @@
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "test": "node --test",
+    "check": "node scripts/check-project.mjs",
+    "check:self": "node scripts/check-project.mjs --self-test",
+    "measure": "node tools/measure.mjs",
+    "measure:update": "node tools/measure-update.mjs",
+    "icons": "node scripts/generate-icons.mjs",
+    "serve:dist": "node tools/serve-dist.mjs"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",

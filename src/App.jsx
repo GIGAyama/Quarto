@@ -3,75 +3,16 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import Swal from 'sweetalert2';
 import confetti from 'canvas-confetti';
+import {
+  BOARD_DIMENSION,
+  CELL_SIZE,
+  PIECES,
+  createInitialGameState,
+  checkWin
+} from './game.js';
 
 // ==========================================
-// 1. Game Constants & Data Definition
-// ==========================================
-const BOARD_DIMENSION = 4;
-const CELL_SIZE = 2;
-const PIECES = [];
-
-// パクパクゴブレットに合わせたプレイヤーカラー
-const PLAYER_COLORS = { 1: '#ff7043', 2: '#42a5f5' };
-
-// 全16種類のコマを生成
-let idCounter = 0;
-for (const color of ['light', 'dark']) {
-  for (const height of ['short', 'tall']) {
-    for (const shape of ['round', 'square']) {
-      for (const hole of ['solid', 'hollow']) {
-        PIECES.push({ id: idCounter++, color, height, shape, hole });
-      }
-    }
-  }
-}
-
-const PIECES_BY_ID = new Map(PIECES.map(p => [p.id, p]));
-
-const createInitialGameState = () => ({
-  board: Array(4).fill(null).map(() => Array(4).fill(null)),
-  availablePieces: PIECES.map(p => p.id),
-  pieceToPlace: null,
-  currentPlayer: 1, // 1=Orange(P1), 2=Blue(P2)
-  currentPhase: 'SELECT',
-  gameOver: false,
-  winner: null,
-  winLine: null
-});
-
-// 勝利判定ロジック
-const checkWin = (currentBoard) => {
-  const lines = [];
-
-  // 縦・横のライン
-  for (let i = 0; i < 4; i++) {
-    lines.push([{ r: i, c: 0 }, { r: i, c: 1 }, { r: i, c: 2 }, { r: i, c: 3 }]);
-    lines.push([{ r: 0, c: i }, { r: 1, c: i }, { r: 2, c: i }, { r: 3, c: i }]);
-  }
-
-  // 斜めのライン
-  lines.push([{ r: 0, c: 0 }, { r: 1, c: 1 }, { r: 2, c: 2 }, { r: 3, c: 3 }]);
-  lines.push([{ r: 0, c: 3 }, { r: 1, c: 2 }, { r: 2, c: 1 }, { r: 3, c: 0 }]);
-
-  for (const line of lines) {
-    const pIds = line.map(p => currentBoard[p.r][p.c]);
-    if (pIds.includes(null)) continue;
-
-    const pObjs = pIds.map(id => PIECES_BY_ID.get(id));
-    const attrs = ['color', 'height', 'shape', 'hole'];
-
-    for (const attr of attrs) {
-      const val = pObjs[0][attr];
-      if (pObjs.every(p => p[attr] === val)) {
-        return { isWin: true, line: line, attr: attr };
-      }
-    }
-  }
-  return { isWin: false };
-};
-
-// ==========================================
-// 2. Sound Manager
+// 1. Sound Manager
 // ==========================================
 class SoundManager {
   constructor() {
@@ -108,8 +49,18 @@ class SoundManager {
   }
 }
 
+// パクパクゴブレットに合わせたプレイヤーカラー。
+// 明るい色（P1 #ff7043 は白地で 2.76:1、P2 #42a5f5 は 2.30:1）をそのまま文字や記号に使うと
+// Chromebook の安価な液晶では読めないため、「面用」と「文字用」の2段階を用意する。
+// 面用は操作パネルの枠（#ffccbc / #bbdefb）として色の印象を保つ側に残してある。
+const PLAYER_TEXT_COLORS = { 1: '#bf360c', 2: '#1565c0' };  // 文字・記号用（白地で 5.7:1 以上）
+
+// 青のリンク・ボタン色。Google Material Blue 600 (#1a73e8) は白地でも
+// 白抜きでも 4.27 しかなく、表にも裏にも届いていない。Blue 700 にすると両方 5.0 を超える。
+const BLUE = '#1967d2';
+
 // ==========================================
-// 3. Three.js Game Engine Wrapper
+// 2. Three.js Game Engine Wrapper
 // ==========================================
 const CAMERA_FOV = 50;
 const TAP_MAX_DISTANCE = 10;   // px: これ以上動いたらカメラ操作とみなす
@@ -467,7 +418,7 @@ class Game3DEngine {
 }
 
 // ==========================================
-// 4. React Main App Component
+// 3. React Main App Component
 // ==========================================
 const popupBaseConfig = {
   background: '#fff9c4',
@@ -484,10 +435,60 @@ export default function App() {
 
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [gameState, setGameState] = useState(createInitialGameState);
+  const [canInstall, setCanInstall] = useState(false);
+  const [presentation, setPresentation] = useState(false);
 
   if (gameStateRef.current === null) {
     gameStateRef.current = gameState;
   }
+
+  // インストールの合図は install-hook.js が <head> の先頭で受け取っている。
+  // 案内できるときだけボタンを出す。出せないボタンを置いておくと
+  // 「押しても何も起きない」と言われる。
+  useEffect(() => {
+    const isStandalone =
+      matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+    if (isStandalone) return;
+
+    if (window.__pwaInstallPrompt) setCanInstall(true);
+    const onAvailable = () => setCanInstall(true);
+    const onInstalled = () => setCanInstall(false);
+    window.addEventListener('pwa-install-available', onAvailable);
+    window.addEventListener('pwa-installed', onInstalled);
+    return () => {
+      window.removeEventListener('pwa-install-available', onAvailable);
+      window.removeEventListener('pwa-installed', onInstalled);
+    };
+  }, []);
+
+  // 提示モード（電子黒板・一斉授業）。教室の後ろの席から読めるよう文字を大きくする。
+  useEffect(() => {
+    document.body.classList.toggle('presentation', presentation);
+    return () => document.body.classList.remove('presentation');
+  }, [presentation]);
+
+  const handleInstall = async () => {
+    const prompt = window.__pwaInstallPrompt;
+    if (!prompt) return;
+    window.__pwaInstallPrompt = null;
+    setCanInstall(false);
+    prompt.prompt();
+    await prompt.userChoice;
+  };
+
+  const togglePresentation = async () => {
+    const next = !presentation;
+    setPresentation(next);
+    try {
+      if (next && !document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else if (!next && document.fullscreenElement) {
+        await document.exitFullscreen();
+      }
+    } catch {
+      // 全画面表示を断られてもモードの切り替え自体は効かせる
+    }
+  };
 
   const getSoundManager = useCallback(() => {
     if (!soundManagerRef.current) soundManagerRef.current = new SoundManager();
@@ -554,11 +555,11 @@ export default function App() {
     setTimeout(() => {
       getSoundManager().playTurnChange();
       const pName = `プレイヤー${nextPlayer}`;
-      const pColor = PLAYER_COLORS[nextPlayer];
+      const pColor = PLAYER_TEXT_COLORS[nextPlayer];
       Swal.fire({
         ...popupBaseConfig,
-        title: `<span style="color:${pColor}">●</span> ${pName} のばん`,
-        html: `<p>渡されたコマを置いてね。</p><small style="color:#8d6e63;">（盤面の好きなマスをタップ！）</small>`,
+        title: `<span style="color:${pColor}" aria-hidden="true">●</span> ${pName} のばん`,
+        html: `<p>渡されたコマを置いてね。</p><small style="color:#5d4037;">（盤面の好きなマスをタップ！）</small>`,
         timer: 1500,
         showConfirmButton: false,
         backdrop: `rgba(0,0,123,0.1)`
@@ -593,7 +594,7 @@ export default function App() {
         getSoundManager().playWin();
         startConfetti();
         const pName = `プレイヤー${prev.currentPlayer}`;
-        const pColor = PLAYER_COLORS[prev.currentPlayer];
+        const pColor = PLAYER_TEXT_COLORS[prev.currentPlayer];
         Swal.fire({
           ...popupBaseConfig,
           title: `<span style="color:${pColor}">🎉 ${pName} のかち！ 🎉</span>`,
@@ -602,7 +603,7 @@ export default function App() {
           confirmButtonText: 'もう一回あそぶ！',
           customClass: {
             ...popupBaseConfig.customClass,
-            confirmButton: 'pop-btn bg-[#1a73e8] text-white rounded-full font-bold px-6 py-2 border-0'
+            confirmButton: 'pop-btn bg-[#1967d2] text-white rounded-full font-bold px-6 min-h-[44px] border-0'
           }
         }).then(() => resetGame());
       }, 1000);
@@ -636,8 +637,8 @@ export default function App() {
       showCancelButton: true,
       confirmButtonText: 'はい',
       cancelButtonText: 'いいえ',
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6'
+      confirmButtonColor: '#c62828',
+      cancelButtonColor: '#1565c0'
     }).then((result) => {
       if (result.isConfirmed) resetGame();
     });
@@ -650,7 +651,7 @@ export default function App() {
       background: '#fff9c4',
       customClass: {
         popup: 'rounded-[20px] border-[5px] border-[#ffca28] font-zen-maru',
-        confirmButton: 'pop-btn bg-[#1a73e8] text-white rounded-full font-bold px-6 py-2 border-0'
+        confirmButton: 'pop-btn bg-[#1967d2] text-white rounded-full font-bold px-6 min-h-[44px] border-0'
       }
     };
 
@@ -661,7 +662,7 @@ export default function App() {
         <p class="font-bold text-[#5d4037]">同じ形を4つそろえよう！</p>
         <div class="flex justify-center items-center gap-6 my-4 bg-white/60 p-4 rounded-[15px]">
           <div style="${iconBase} border-radius:50%; background:#8d6e63;"></div>
-          <div class="text-xl font-black text-[#bcaaa4]">または</div>
+          <div class="text-xl font-black text-[#5d4037]">または</div>
           <div style="${iconBase} border-radius:10%; background:#8d6e63;"></div>
         </div>
         <p class="font-bold text-[#5d4037]">丸 か 四角</p>
@@ -676,7 +677,7 @@ export default function App() {
         <p class="font-bold text-[#5d4037]">同じ色を4つそろえよう！</p>
         <div class="flex justify-center items-center gap-6 my-4 bg-white/60 p-4 rounded-[15px]">
           <div style="${iconBase} border-radius:50%; background:#fff8e1; border: 2px solid #8d6e63;"></div>
-          <div class="text-xl font-black text-[#bcaaa4]">または</div>
+          <div class="text-xl font-black text-[#5d4037]">または</div>
           <div style="${iconBase} border-radius:50%; background:#4e342e;"></div>
         </div>
         <p class="font-bold text-[#5d4037]">白 か 黒</p>
@@ -691,7 +692,7 @@ export default function App() {
         <p class="font-bold text-[#5d4037]">同じ高さを4つそろえよう！</p>
         <div class="flex justify-center items-center gap-6 my-4 bg-white/60 p-4 rounded-[15px]">
           <div style="${iconBase} height: 65px; background:#8d6e63; border-radius:5px;"></div>
-          <div class="text-xl font-black text-[#bcaaa4]">または</div>
+          <div class="text-xl font-black text-[#5d4037]">または</div>
           <div style="${iconBase} height: 35px; background:#8d6e63; border-radius:5px;"></div>
         </div>
         <p class="font-bold text-[#5d4037]">高い か 低い</p>
@@ -706,7 +707,7 @@ export default function App() {
         <p class="font-bold text-[#5d4037]">最後のルール！穴はどうかな？</p>
         <div class="flex justify-center items-center gap-6 my-4 bg-white/60 p-4 rounded-[15px]">
           <div style="${iconBase} border-radius:50%; background:#8d6e63;"></div>
-          <div class="text-xl font-black text-[#bcaaa4]">または</div>
+          <div class="text-xl font-black text-[#5d4037]">または</div>
           <div style="${iconBase} border-radius:50%; background: radial-gradient(circle, transparent 30%, #8d6e63 31%); border: 2px solid #8d6e63;"></div>
         </div>
         <p class="font-bold text-[#5d4037]">穴なし か 穴あり</p>
@@ -714,7 +715,7 @@ export default function App() {
       confirmButtonText: 'わかった！',
       customClass: {
         ...popupConfig.customClass,
-        confirmButton: 'pop-btn bg-[#4caf50] text-white rounded-full font-bold px-6 py-2 border-0'
+        confirmButton: 'pop-btn bg-[#2e7d32] text-white rounded-full font-bold px-6 min-h-[44px] border-0'
       }
     });
   };
@@ -745,29 +746,55 @@ export default function App() {
         <div ref={mountRef} className="absolute inset-0 z-0 touch-none" />
 
         {/* UI レイヤー (前面) */}
-        <div className="absolute inset-0 z-10 flex flex-col pointer-events-none">
+        <div className="absolute inset-0 z-10 flex flex-col pointer-events-none safe-x">
 
           {/* 1. ヘッダー (固定) */}
-          <header className="safe-top flex justify-between items-center py-2 px-3 bg-white/90 backdrop-blur-[5px] border-b-[3px] border-[#ffca28] shadow-sm pointer-events-auto flex-shrink-0">
-            <div className="flex items-center">
-              <h1 className="text-[#1a73e8] font-black text-lg m-0 drop-shadow-[2px_2px_0_rgba(255,255,255,1)] tracking-wide">
+          <header className="safe-top flex justify-between items-center gap-2 py-2 px-3 bg-white/90 backdrop-blur-[5px] border-b-[3px] border-[#ffca28] shadow-sm pointer-events-auto flex-shrink-0">
+            <div className="flex items-center min-w-0">
+              <h1
+                className="font-black m-0 drop-shadow-[2px_2px_0_rgba(255,255,255,1)] tracking-wide whitespace-nowrap"
+                style={{ color: BLUE, fontSize: 'var(--fs-title)' }}
+              >
                 GIGAクアルト！
               </h1>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {canInstall && (
+                <button
+                  onClick={handleInstall}
+                  aria-label="このアプリを端末にインストールする"
+                  className="tap-44 pop-btn bg-gray-100 font-bold rounded-full px-3 h-9 shadow-sm border-0"
+                  style={{ color: BLUE, fontSize: 'var(--fs-small)' }}
+                >
+                  <span aria-hidden="true">⬇</span> いれる
+                </button>
+              )}
+              {/* 提示モードは電子黒板・教員PC向け。320px のスマホでは
+                  ヘッダーが折り返して別の破綻を生むので、広い画面でだけ出す。 */}
+              <button
+                onClick={togglePresentation}
+                aria-pressed={presentation}
+                aria-label={presentation ? '提示モードをやめる' : '提示モード（大きく表示）にする'}
+                className="tap-44 pop-btn hidden sm:flex bg-gray-100 font-bold rounded-full px-3 h-9 items-center shadow-sm border-0"
+                style={{ color: BLUE, fontSize: 'var(--fs-small)' }}
+              >
+                <span aria-hidden="true">{presentation ? '🔳 もどす' : '🔲 大きく'}</span>
+              </button>
               <button
                 onClick={toggleSound}
+                aria-pressed={soundEnabled}
                 aria-label={soundEnabled ? 'サウンドをオフにする' : 'サウンドをオンにする'}
-                className="bg-gray-100 text-[#1a73e8] text-xs font-bold rounded-full px-3 py-1.5 shadow-sm border-0"
+                className="tap-44 pop-btn bg-gray-100 font-bold rounded-full px-3 h-9 shadow-sm border-0"
+                style={{ color: BLUE, fontSize: 'var(--fs-small)' }}
               >
                 {soundEnabled ? '🔊 ON' : '🔇 OFF'}
               </button>
               <button
                 onClick={showRules}
                 aria-label="ルールを見る"
-                className="pop-btn bg-[#ffca28] text-white font-black rounded-full w-9 h-9 flex items-center justify-center shadow-sm text-lg border-0 p-0"
+                className="tap-44 pop-btn bg-[#ffca28] text-[#5d4037] font-black rounded-full w-9 h-9 flex items-center justify-center shadow-sm text-lg border-0 p-0"
               >
-                ？
+                <span aria-hidden="true">？</span>
               </button>
             </div>
           </header>
@@ -780,15 +807,21 @@ export default function App() {
             <div className="turn-panel pointer-events-auto bg-white/80 backdrop-blur-sm rounded-3xl shadow-md px-6 py-2.5 text-center flex flex-col items-center w-full max-w-sm border-2 transition-colors duration-300"
                  style={{ borderColor: gameState.currentPlayer === 1 ? '#ffccbc' : '#bbdefb' }}>
 
-              <div className="font-bold text-[#5d4037] mb-1 text-[1.1rem] flex items-center justify-center gap-2">
-                <span style={{ color: PLAYER_COLORS[gameState.currentPlayer] }}>●</span>
+              <div
+                className="font-bold text-[#5d4037] mb-1 flex items-center justify-center gap-2"
+                style={{ fontSize: 'var(--fs-lead)' }}
+              >
+                <span style={{ color: PLAYER_TEXT_COLORS[gameState.currentPlayer] }} aria-hidden="true">●</span>
                 プレイヤー{gameState.currentPlayer} のばん
               </div>
 
-              {/* ステータスメッセージ */}
-              <div className="text-sm font-medium opacity-80 mb-2">
+              {/* ステータスメッセージ。
+                  いま何をすればよいかを伝える案内文なので、装飾ではなく本文として扱う。
+                  opacity で薄くすると 4.5:1 を割るため使わない。
+                  盤面の変化を目で追えない子にも届くよう aria-live で読み上げる。 */}
+              <div className="font-medium mb-2" style={{ fontSize: 'var(--fs-body)' }} aria-live="polite">
                 {gameState.gameOver ? (
-                  <span className="text-[#ff7043] animate-pulse font-bold">ゲーム終了！</span>
+                  <span className="text-[#bf360c] animate-pulse font-bold">ゲーム終了！</span>
                 ) : gameState.currentPhase === 'SELECT' ? (
                   <><ruby>相手<rt>あいて</rt></ruby>に<ruby>渡<rt>わた</rt></ruby>すコマをえらんでね！</>
                 ) : (
@@ -798,7 +831,8 @@ export default function App() {
 
               <button
                 onClick={confirmReset}
-                className="pop-btn border-2 border-red-400 text-red-500 bg-white text-[0.8rem] font-bold rounded-full px-5 py-1.5 hover:bg-red-50"
+                className="tap-44 pop-btn border-2 border-[#c62828] text-[#c62828] bg-white font-bold rounded-full px-5 py-1.5 hover:bg-red-50"
+                style={{ fontSize: 'var(--fs-small)' }}
               >
                 <ruby>最初<rt>さいしょ</rt></ruby>から
               </button>
@@ -806,8 +840,9 @@ export default function App() {
           </div>
 
           {/* 4. フッター (固定) */}
-          <footer className="app-footer safe-bottom text-center text-gray-500 py-1.5 border-t border-gray-200 bg-white pointer-events-auto flex-shrink-0">
-            <small className="text-[0.7rem] font-medium">© 2026 GIGAクアルト！ <a href="https://note.com/cute_borage86" target="_blank" rel="noreferrer" className="text-gray-500 no-underline hover:text-blue-500">GIGA山</a></small>
+          {/* リンクは既定だと 35×11px しかないので、tap-44 で当たり判定だけを広げる */}
+          <footer className="app-footer safe-bottom text-center text-gray-600 py-1.5 border-t border-gray-200 bg-white pointer-events-auto flex-shrink-0">
+            <small className="font-medium" style={{ fontSize: 'var(--fs-small)' }}>© 2026 GIGAクアルト！ <a href="https://note.com/cute_borage86" target="_blank" rel="noreferrer" className="tap-44 inline-block text-gray-600 no-underline hover:text-blue-700">GIGA山</a></small>
           </footer>
         </div>
 
