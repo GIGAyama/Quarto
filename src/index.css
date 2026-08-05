@@ -1,24 +1,99 @@
+/* Google Fonts は「見た目だけ」の依存なので CDN のまま許容する（GIGA Standard v5 §2-7）。
+   学校のフィルタリングで fonts.googleapis.com が塞がれても、字の形が変わるだけで
+   アプリは動く。届かなかったときのために、端末側の日本語フォントを必ず後ろに並べる。
+   なお実行コード（React / three.js / SweetAlert2）は 1バイトも CDN から取らない。 */
 @import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Web フォントが届かない学校でも字が崩れないよう、端末側の丸ゴシックを後ろに並べる */
+  --font-ui: 'Zen Maru Gothic', 'Hiragino Maru Gothic ProN', 'Yu Gothic UI',
+             'Hiragino Kaku Gothic ProN', 'Noto Sans JP', system-ui, sans-serif;
+
+  /* 画面幅に応じて伸び縮みする文字サイズ。320px のスマホから
+     電子黒板まで、メディアクエリを何段も書かずに1本で対応する */
+  --fs-body:  clamp(14px, 1.6vw + 9px, 18px);
+  --fs-lead:  clamp(17px, 2.2vw + 11px, 24px);
+  --fs-title: clamp(18px, 3.2vw + 10px, 30px);
+  --fs-small: clamp(12px, 1.0vw + 9px, 14px);
+
+  /* ノッチ・ホームバー・丸角のぶんの余白 */
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+
+  /* 児童用アプリなので配色は固定する（端末のダークモードで色が反転しない） */
+  color-scheme: light;
+}
+
+/* 100vh はモバイルのアドレスバーのぶんだけはみ出すので dvh を使う。
+   dvh を先に書き、対応していない古い端末だけ @supports で 100vh に落とす。 */
 html, body, #root {
-  height: 100%;
+  height: 100dvh;
   margin: 0;
   overscroll-behavior: none;
 }
-
-.font-zen-maru {
-  font-family: 'Zen Maru Gothic', sans-serif;
+@supports not (height: 100dvh) {
+  html, body, #root { height: 100vh; }
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  /* ダブルタップ拡大の 300ms 遅延を消す。ピンチでの拡大は禁止していない
+     （見えづらい子が拡大できないほうが害が大きいため） */
+  touch-action: manipulation;
+}
+
+* { -webkit-tap-highlight-color: transparent; }
+
+:focus-visible {
+  outline: 3px solid #1967d2;
+  outline-offset: 2px;
+}
+
+.font-zen-maru { font-family: var(--font-ui); }
+
+/* ===== ふりがな =====
+   色を決め打ちすると、色のついたボタンの上に重なったときに読めなくなる。
+   ふりがなが要るのは低学年の児童なので、いちばん読めなくて困る人が
+   いちばん読めない形になる。白地の既定値だけ決め、色のついた面では継がせる。 */
 ruby { ruby-position: over; }
 rt {
   font-size: 0.65em;
-  color: #8d6e63;
+  color: #6d4c41;   /* 白地で 7.1:1 */
   font-weight: 500;
+}
+button rt,
+a rt,
+.badge rt,
+[class*="bg-"] rt,
+[class*="btn"] rt,
+[class*="text-"] rt { color: inherit; }
+
+/* ===== タップ領域 44px =====
+   ボタン自体を大きくすると詰めて組んだヘッダーが折り返して別の破綻を生むので、
+   疑似要素で当たり判定だけを広げる。 */
+.tap-44 { position: relative; }
+.tap-44::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  min-width: 44px;
+  min-height: 44px;
 }
 
 /* パクパクゴブレット風 ポップボタンアニメーション */
@@ -35,21 +110,132 @@ rt {
 }
 
 /* ノッチ端末・PWAスタンドアロン表示でのセーフエリア確保 */
-.safe-top { padding-top: env(safe-area-inset-top); }
-.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+.safe-top { padding-top: var(--safe-t); }
+.safe-bottom { padding-bottom: var(--safe-b); }
+/* 横向きにしたときにノッチ側で中身が欠けないようにする */
+.safe-x { padding-left: var(--safe-l); padding-right: var(--safe-r); }
+
+/* ===== 提示モード（電子黒板・一斉授業） =====
+   教員が「大きく」を押すと body に .presentation が付く。
+   教室の後ろの席から読めることが要件。 */
+.presentation { font-size: 150%; }
+.presentation .turn-panel { max-width: 44rem; }
+.presentation button { min-height: 64px; }
+.presentation .app-footer { display: none; }
+@media (min-width: 1600px) {
+  :root {
+    --fs-lead:  clamp(20px, 2.2vw + 12px, 34px);
+    --fs-title: clamp(22px, 3.2vw + 12px, 44px);
+  }
+}
 
 /* 高さの低い横画面（スマホ横持ち）では、盤面を隠さないよう
    パネルを左下にコンパクトに寄せ、フッターを隠す */
 @media (orientation: landscape) and (max-height: 520px) {
-  .turn-panel-wrap {
-    justify-content: flex-start;
-  }
+  .turn-panel-wrap { justify-content: flex-start; }
   .turn-panel {
     max-width: 15rem;
     padding-left: 1rem;
     padding-right: 1rem;
   }
-  .app-footer {
-    display: none;
+  .app-footer { display: none; }
+}
+
+/* ===== 動きの配慮 =====
+   .01ms であって 0 ではない。0 にすると animation-fill-mode: forwards が
+   効かなくなり、fadeIn 系の要素が opacity: 0 のまま消える。
+   「動きを止める」つもりが「中身を消す」ことになる。 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ハイコントラストモードでは背景色が無効化されるため、
+   枠線がないと「押せる場所」が分からなくなる */
+@media (forced-colors: active) {
+  button, .pop-btn {
+    border: 2px solid ButtonText;
+  }
+  .update-toast { border: 2px solid CanvasText; }
+}
+
+/* ===== 更新のお知らせ =====
+   新しい版が待機したら児童にも分かる言葉で促す。押されるまで切り替えない。 */
+.update-toast {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(12px + var(--safe-b));
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100vw - 24px);
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #5d4037;
+  font-family: var(--font-ui);
+  font-size: var(--fs-small);
+  font-weight: 700;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+  border: 3px solid #ffca28;
+}
+.update-toast button {
+  flex: none;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: #1967d2;   /* 白抜き文字で 5.2:1 */
+  color: #ffffff;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+/* ===== SweetAlert2 の既定色 =====
+   アプリ固有の配色を疑う前に、ライブラリの既定色を疑うこと。
+   ポップアップの ？ ✓ ! i × のしるしは、いずれも淡いパステルで
+   ポップアップの下地（#fff9c4）の上では基準に届いていない。
+   実測：question #87adbd = 2.24:1（大きな文字の基準 3:1 に対して）。
+   色相は変えずに1〜2段濃くする。 */
+div.swal2-icon.swal2-question {
+  border-color: #6d4c41;
+  color: #6d4c41;   /* 2.24 → 6.5 */
+}
+div.swal2-icon.swal2-success {
+  border-color: #2e7d32;
+  color: #2e7d32;   /* #a5dc86 = 1.73 → 4.8 */
+}
+div.swal2-icon.swal2-success [class^='swal2-success-line'] {
+  background-color: #2e7d32;
+}
+div.swal2-icon.swal2-info {
+  border-color: #1565c0;
+  color: #1565c0;   /* #3fc3ee = 1.90 → 5.2 */
+}
+div.swal2-icon.swal2-warning {
+  border-color: #b26a00;
+  color: #b26a00;   /* #f8bb86 = 1.71 → 3.9 */
+}
+div.swal2-icon.swal2-error {
+  border-color: #c62828;
+  color: #c62828;   /* #f27474 = 2.63 → 5.1 */
+}
+div.swal2-icon.swal2-error [class^='swal2-x-mark-line'] {
+  background-color: #c62828;
+}
+
+/* 印刷は本アプリの用途ではないが、誤って印刷されたときに
+   操作パネルや更新の帯が紙に出ないようにしておく */
+@media print {
+  .no-print, .update-toast, .app-footer, header, .turn-panel-wrap {
+    display: none !important;
   }
 }
