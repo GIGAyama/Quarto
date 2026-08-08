@@ -425,9 +425,31 @@ const popupBaseConfig = {
   customClass: { popup: 'rounded-[20px] border-[5px] border-[#ffca28] font-zen-maru' }
 };
 
+// 紙吹雪の描き場所。
+//
+// ⚠️ canvas-confetti を素のまま呼んではいけない。理由が2つある。
+//    1. 既定では blob: の Worker を作ろうとする。CSP の worker-src 'self' に
+//       はじかれて、勝つたびにコンソールへ違反が出る（描画自体は本体側に落ちる）。
+//    2. 既定の canvas は z-index 100 で、SweetAlert2 の 1060 より下になる。
+//       「かち！」のポップアップと暗幕が全面を覆うので、紙吹雪は一枚も見えない。
+//    自前の canvas をポップアップより上に置き、Worker を使わない設定で作る。
+const CONFETTI_Z = 2000; // SweetAlert2 の 1060 より上
+const createConfetti = () => {
+  const canvas = document.createElement('canvas');
+  canvas.setAttribute('aria-hidden', 'true');
+  canvas.style.cssText =
+    `position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:${CONFETTI_Z}`;
+  document.body.appendChild(canvas);
+  return {
+    canvas,
+    fire: confetti.create(canvas, { resize: true, useWorker: false })
+  };
+};
+
 export default function App() {
   const mountRef = useRef(null);
   const engineRef = useRef(null);
+  const confettiRef = useRef(null);
   const soundManagerRef = useRef(null);
   const soundEnabledRef = useRef(true);
   const gameStateRef = useRef(null);
@@ -514,6 +536,11 @@ export default function App() {
       if (engineRef.current) {
         engineRef.current.dispose();
         engineRef.current = null;
+      }
+      if (confettiRef.current) {
+        confettiRef.current.fire.reset();
+        confettiRef.current.canvas.remove();
+        confettiRef.current = null;
       }
     };
   }, []);
@@ -721,11 +748,13 @@ export default function App() {
   };
 
   const startConfetti = () => {
+    if (!confettiRef.current) confettiRef.current = createConfetti();
+    const fire = confettiRef.current.fire;
     const duration = 3000;
     const end = Date.now() + duration;
     (function frame() {
-      confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#ff7043', '#42a5f5', '#ffca28'] });
-      confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#ff7043', '#42a5f5', '#ffca28'] });
+      fire({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#ff7043', '#42a5f5', '#ffca28'] });
+      fire({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#ff7043', '#42a5f5', '#ffca28'] });
       if (Date.now() < end) requestAnimationFrame(frame);
     }());
   };
