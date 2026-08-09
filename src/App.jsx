@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import Swal from 'sweetalert2';
 import confetti from 'canvas-confetti';
+import { ErrorScreen } from './ErrorScreen.jsx';
 import {
   BOARD_DIMENSION,
   CELL_SIZE,
@@ -10,6 +11,20 @@ import {
   createInitialGameState,
   checkWin
 } from './game.js';
+
+// この端末で 3D 表示（WebGL）が使えるか。
+//
+// three.js は使えないときに「Error creating WebGL context.」を投げるだけで、
+// 「端末が古い」のか「設定で切られている」のかを教えてくれない。
+// 例外を受けたあとにここで確かめて、利用者に出す文面を選び分ける。
+function canUseWebGL() {
+  try {
+    const canvas = document.createElement('canvas');
+    return Boolean(canvas.getContext('webgl2') || canvas.getContext('webgl'));
+  } catch {
+    return false;
+  }
+}
 
 // ==========================================
 // 1. Sound Manager
@@ -459,6 +474,8 @@ export default function App() {
   const [gameState, setGameState] = useState(createInitialGameState);
   const [canInstall, setCanInstall] = useState(false);
   const [presentation, setPresentation] = useState(false);
+  // 3D の盤面を用意できなかった理由。null なら問題なし。
+  const [initError, setInitError] = useState(null);
 
   if (gameStateRef.current === null) {
     gameStateRef.current = gameState;
@@ -525,12 +542,21 @@ export default function App() {
 
   useEffect(() => {
     if (!engineRef.current && mountRef.current) {
-      // エンジンには常に最新のハンドラを参照させる（stale closure対策）
-      engineRef.current = new Game3DEngine(mountRef.current, {
-        onPieceSelect: (pid) => callbacksRef.current.onPieceSelect(pid),
-        onCellSelect: (row, col) => callbacksRef.current.onCellSelect(row, col)
-      });
-      engineRef.current.syncState(gameStateRef.current);
+      try {
+        // エンジンには常に最新のハンドラを参照させる（stale closure対策）
+        engineRef.current = new Game3DEngine(mountRef.current, {
+          onPieceSelect: (pid) => callbacksRef.current.onPieceSelect(pid),
+          onCellSelect: (row, col) => callbacksRef.current.onCellSelect(row, col)
+        });
+        engineRef.current.syncState(gameStateRef.current);
+      } catch (err) {
+        // ⚠️ ここで投げっぱなしにすると React が画面の木を丸ごと外し、
+        //    利用者にはまっ白な画面しか残らない（原因を書く場所すら無くなる）。
+        //    3D が用意できないことは分かっているので、事情を書いた画面に差し替える。
+        console.error('[app] 3D の盤面を用意できませんでした', err);
+        engineRef.current = null;
+        setInitError(canUseWebGL() ? 'unknown' : 'webgl');
+      }
     }
     return () => {
       if (engineRef.current) {
@@ -765,6 +791,10 @@ export default function App() {
     backgroundPosition: '0 0, 25px 25px',
     backgroundSize: '50px 50px'
   };
+
+  // ⚠️ この分岐は必ず全てのフックを呼んだあとに置く。
+  //    先に return すると呼ばれるフックの数が回によって変わり、React が壊れる。
+  if (initError) return <ErrorScreen kind={initError} />;
 
   return (
     <>

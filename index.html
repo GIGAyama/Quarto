@@ -62,9 +62,87 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="クアルト！" />
     <title>GIGAクアルト！</title>
+
+    <!--
+      「まっ白よけ」の見た目。
+      本体の CSS（assets/*.css）が届かなかったときにも出したいので、
+      外のファイルに置かず、ここに直に書く。
+      style-src の 'unsafe-inline' で許してある（上の CSP 参照）。
+
+      ⚠️ 出るまでに 12秒待たせる。
+        校内 Wi-Fi が混んでいると読み込みに 10秒近くかかることがあり、
+        すぐ出すと「ちゃんと開いている最中」に警告が割り込む。
+      ⚠️ 待ち時間は animation-delay で作る。
+        index.css の prefers-reduced-motion は animation-duration だけを潰すので、
+        duration ではなく delay に持たせておけば、動きを減らす設定でも待ち時間は残る。
+      ⚠️ この節は <div id="root"> の中に置く。
+        React は最初の描画で root の中身を空にするため、
+        アプリが立ち上がりさえすれば、この節は勝手に消える。
+    -->
+    <style>
+      .boot-fallback {
+        animation: boot-fallback-in 1ms linear 12s forwards;
+        background: #fff9c4;
+        box-sizing: border-box;
+        color: #5d4037;
+        font-family: 'Hiragino Maru Gothic ProN', 'Yu Gothic UI', system-ui, sans-serif;
+        inset: 0;
+        opacity: 0;
+        padding: 24px 16px;
+        position: fixed;
+        text-align: center;
+      }
+      @keyframes boot-fallback-in {
+        to { opacity: 1; }
+      }
+      .boot-fallback__card {
+        background: #fff;
+        border: 5px solid #ffca28;
+        border-radius: 20px;
+        margin: 0 auto;
+        max-width: 480px;
+        padding: 24px 20px;
+      }
+      .boot-fallback__title {
+        font-size: 22px;
+        font-weight: 700;
+        margin: 0 0 12px;
+      }
+      .boot-fallback__btn {
+        background: #ffca28;
+        border-radius: 999px;
+        color: #5d4037;
+        display: inline-block;
+        font-weight: 700;
+        /* 児童が押すので当たり判定は 44px を下回らせない */
+        min-height: 44px;
+        padding: 11px 24px;
+        text-decoration: none;
+      }
+      .boot-fallback__hint {
+        font-size: 13px;
+        margin: 20px 0 0;
+        text-align: left;
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="boot-fallback" role="alert">
+        <div class="boot-fallback__card">
+          <p aria-hidden="true" style="font-size: 40px; margin: 0 0 8px">🧩</p>
+          <p class="boot-fallback__title">うまく ひらけませんでした</p>
+          <p>つうしんが うまく いって いないようです。</p>
+          <p style="margin-bottom: 20px">したの ボタンを おして みて ください。</p>
+          <a class="boot-fallback__btn" href="/Quarto/">もういちど ひらく</a>
+          <p class="boot-fallback__hint">
+            先生へ：何度やっても この画面のままなら、ブラウザの再読み込み（Ctrl+Shift+R）か、
+            設定の「閲覧履歴データの削除 → キャッシュされた画像とファイル」をお試しください。
+            アプリとして入れている場合は、いったん削除して入れ直すと直ります。
+          </p>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
