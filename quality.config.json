@@ -1,7 +1,7 @@
 {
   "repoName": "Quarto",
   "repoBasePath": "/Quarto/",
-  "appVersion": "v2",
+  "appVersion": "v3",
   "swSource": "src/sw.js",
   "offlineHtml": "public/offline.html",
 

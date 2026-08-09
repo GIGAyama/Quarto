@@ -11,8 +11,9 @@
  * （Service Worker からは触れないうえ、触れる設計にすると壊れ方が読めなくなる）。
  */
 
-const CACHE_PREFIX = 'giga-quarto-';
-const APP_VERSION = 'v2'; // ← リリースごとに必ず上げる
+import { CACHE_PREFIX } from './app-cache.js';
+
+const APP_VERSION = 'v3'; // ← リリースごとに必ず上げる
 const CACHE_STATIC = CACHE_PREFIX + 'static-' + APP_VERSION;
 const CACHE_RUNTIME = CACHE_PREFIX + 'runtime-' + APP_VERSION;
 
