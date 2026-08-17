@@ -1,6 +1,7 @@
 {
   "repoName": "Quarto",
-  "repoBasePath": "/Quarto/",
+  "_repoBasePath": "manifest の id/scope/start_url に期待する値。独自ドメインではアプリは quarto.giga-school.com の直下で配信されるので相対パス \"./\"。リポジトリ名の絶対パスに戻すと scope がページの URL を含まなくなり、PWA としてインストールできなくなる。vite.config.js の base と同じ値にすること。",
+  "repoBasePath": "./",
   "appVersion": "v3",
   "swSource": "src/sw.js",
   "offlineHtml": "public/offline.html",

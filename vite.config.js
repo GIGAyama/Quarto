@@ -4,7 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: '/Quarto/',
+  base: './',
   plugins: [
     react(),
     VitePWA({
@@ -25,11 +25,11 @@ export default defineConfig({
         //    id を省略すると start_url が代替の識別子になり、似た構成の別アプリと
         //    取り違えられて「開いたら違うアプリが立ち上がる」事故が起きる。
         //
-        //    今回 id を明示したが、省略時の既定値は start_url（= '/Quarto/'）なので
+        //    今回 id を明示したが、省略時の既定値は start_url（= './'）なので
         //    値は変わっていない。すでにインストール済みの端末で別アプリ扱いにはならない。
-        id: '/Quarto/',
-        start_url: '/Quarto/',
-        scope: '/Quarto/',
+        id: './',
+        start_url: './',
+        scope: './',
         name: 'GIGAクアルト！',
         short_name: 'クアルト！',
         description: '3Dボードゲーム「クアルト！」のWebアプリ版。相手に渡すコマを自分が選ぶ、頭を使う4目ならべです。',

@@ -153,7 +153,7 @@ const BREAKAGE = {
     ...o,
     text: (p) =>
       p === 'index.html'
-        ? '<head><script type="module" src="/src/main.jsx"></script><script src="/Quarto/install-hook.js"></script></head>'
+        ? '<head><script type="module" src="/src/main.jsx"></script><script src="./install-hook.js"></script></head>'
         : o.text(p)
   }),
   // ⚠️ 削除式を正規表現で追うと (k) => caches.delete(k) を見落とす。
