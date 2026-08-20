@@ -16,7 +16,7 @@
 
 ブラウザで次の場所を開きます。
 
-https://gigayama.github.io/Quarto/
+https://quarto.giga-school.com/
 
 Chromebook・iPad・Windows・スマートフォンのどれでも同じように動きます。
 

@@ -21,7 +21,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SW = join(ROOT, 'dist/sw.js');
 const ORIGIN = process.env.MEASURE_ORIGIN || 'http://localhost:4173';
-const URL_APP = `${ORIGIN}/Quarto/`;
+const URL_APP = `${ORIGIN}/`;
 
 const results = [];
 const record = (name, ok, detail) => {

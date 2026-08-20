@@ -14,7 +14,10 @@ import { dirname } from 'node:path';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(ROOT, 'dist');
-const BASE = '/Quarto/';
+// 本番と同じ「ドメイン直下」で配る。独自ドメイン quarto.giga-school.com では
+// アプリがドメイン直下に置かれるので、旧構成の '/Quarto/' の下で配ると、
+// 本番では 404 になるパスが測定環境でだけ通り、壊れていても「合格」と出る。
+const BASE = '/';
 const PORT = Number(process.argv[2] || 4173);
 
 const TYPES = {

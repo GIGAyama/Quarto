@@ -11,7 +11,7 @@ React と Three.js で制作された、3Dボードゲーム「クアルト！�
 「パクパクゴブレット」のような親しみやすいデザインと、直感的な3D操作が特徴です。
 
 ## 🚀 デプロイ先 (Live Demo)
-[https://gigayama.github.io/Quarto/](https://gigayama.github.io/Quarto/)
+[https://quarto.giga-school.com/](https://quarto.giga-school.com/)
 
 ## 🎮 ゲームの概要
 
