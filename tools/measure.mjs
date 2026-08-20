@@ -19,7 +19,7 @@
 import { chromium, devices } from 'playwright';
 
 const ORIGIN = process.env.MEASURE_ORIGIN || 'http://localhost:4173';
-const URL_APP = `${ORIGIN}/Quarto/`;
+const URL_APP = `${ORIGIN}/`;
 
 const results = [];
 const record = (name, ok, detail) => {
@@ -297,7 +297,7 @@ async function main() {
   const page = await ctx.newPage();
 
   // 他アプリのキャッシュを2つ置いてから開き、巻き添えで消えないかを見る
-  await page.goto(`${ORIGIN}/Quarto/offline.html`);
+  await page.goto(`${ORIGIN}/offline.html`);
   await page.evaluate(async () => {
     await caches.open('townmap-mikke-static-v1');
     await caches.open('keisan-card-static-v3');

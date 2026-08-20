@@ -21,7 +21,7 @@
 
 そこで作ったのが「GIGAクアルト！」です。
 
-https://gigayama.github.io/Quarto/
+https://quarto.giga-school.com/
 
 ボードゲームの「クアルト！」を、ブラウザで開くだけで遊べるようにしたものです。
 たて4つ、よこ4つの16マスに、16個のコマを交互に置いていきます。
@@ -216,7 +216,7 @@ https://gigayama.github.io/Quarto/
 まず、通信についてです。
 このアプリが読みこむものは、すべて次のアドレスの下にあります。
 
-- https://gigayama.github.io/Quarto/
+- https://quarto.giga-school.com/
 
 校内のフィルタリングで許可が必要なのは、ここだけです。
 このほかに、字の形をきれいに見せるために fonts.googleapis.com と
