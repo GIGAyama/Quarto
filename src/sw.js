@@ -14,7 +14,7 @@
 
 import { CACHE_PREFIX } from './app-cache.js';
 
-const APP_VERSION = 'v3'; // ← リリースごとに必ず上げる
+const APP_VERSION = 'v4'; // ← リリースごとに必ず上げる
 const CACHE_STATIC = CACHE_PREFIX + 'static-' + APP_VERSION;
 const CACHE_RUNTIME = CACHE_PREFIX + 'runtime-' + APP_VERSION;
 
