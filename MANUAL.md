@@ -161,7 +161,7 @@ Chromebook・iPad・Windows・スマートフォンのどれでも同じよう�
 
 端末・ブラウザの種類と、画面に出ていた文字を控えて、作者までお知らせください。
 
-[GIGA山](https://note.com/cute_borage86)
+[GIGA山](https://giga-school.com)
 
 ---
 
