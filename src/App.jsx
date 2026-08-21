@@ -901,7 +901,7 @@ export default function App() {
           {/* 4. フッター (固定) */}
           {/* リンクは既定だと 35×11px しかないので、tap-44 で当たり判定だけを広げる */}
           <footer className="app-footer safe-bottom text-center text-gray-600 py-1.5 border-t border-gray-200 bg-white pointer-events-auto flex-shrink-0">
-            <small className="font-medium" style={{ fontSize: 'var(--fs-small)' }}>© 2026 GIGAクアルト！ <a href="https://note.com/cute_borage86" target="_blank" rel="noreferrer" className="tap-44 inline-block text-gray-600 no-underline hover:text-blue-700">GIGA山</a></small>
+            <small className="font-medium" style={{ fontSize: 'var(--fs-small)' }}>© 2026 GIGAクアルト！ <a href="https://giga-school.com" target="_blank" rel="noreferrer" className="tap-44 inline-block text-gray-600 no-underline hover:text-blue-700">GIGA山</a></small>
           </footer>
         </div>
 

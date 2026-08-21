@@ -195,4 +195,4 @@ npm run icons
 先生向けの使い方は [MANUAL.md](./MANUAL.md) です。
 
 ## ✒️ 作者
-[GIGA山](https://note.com/cute_borage86)
+[GIGA山](https://giga-school.com)
