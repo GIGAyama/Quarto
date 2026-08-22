@@ -10,8 +10,24 @@
  *    実際にこの確認をしたことで、検査そのものの不具合が見つかっている。
  *
  * 検査の中身は scripts/lib/giga-v5-checks.mjs にある。
- * 共通の正本（scripts/lib/project-quality.mjs）を受け取れるようになったら、
- * このファイルが両者を合成する形にする。
+ *
+ * ここにはかつて「共通の正本 scripts/lib/project-quality.mjs を受け取れる
+ * ようになったら合成する」と書いてあった。その計画は取りやめた
+ * （2026-08-22 に艦隊を実測した結果）:
+ *
+ *   ・project-quality.mjs は艦隊の8本にコピーがあるが、3世代に割れており
+ *     （297行が6本・158行が1本・64行が1本）、export する名前もばらばら
+ *     （runQualityChecks / run / 該当なし）。「丸ごと差し替えで受ける」
+ *     ことができる形になっていない。
+ *   ・それを任意参照していた5本のリポジトリでは、コピーを置いても
+ *     検査が1件も増えないか、例外で落ちるかのどちらかだった。
+ *     「無ければ素通り」の側は、秘密の直書きを見落とす穴になっていた。
+ *
+ * 共通化は、ひとつの大きな正本ではなく**用件ごとの小さな正本**で進める。
+ * いまは次の2つが GIGAyama.github.io/standards/ にある:
+ *   standards/lib/giga-v5-checks.mjs … Part I の検査
+ *   standards/lib/check-secrets.mjs  … 秘密の直書き（tools/ に配布ずみ）
+ * どちらも丸ごと1ファイルで完結し、無ければコマンドごと失敗する。
  */
 import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
 import { join, relative, dirname } from 'node:path';
