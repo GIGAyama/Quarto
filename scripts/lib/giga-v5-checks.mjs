@@ -388,15 +388,29 @@ export const checks = [
   {
     id: 'E11_APP_VERSION',
     phase: 'P1',
-    title: 'sw.js の APP_VERSION が quality.config.json と一致している',
+    title: 'sw.js の APP_VERSION が自動生成されている',
+    // 以前は「sw.js の APP_VERSION が quality.config.json の appVersion と
+    // 一致しているか」を見ていた。どちらも手書きなので、いっしょに上げ忘れれば
+    // 揃ったまま緑になる。2026-08-21 に12リポジトリで同時に上げ忘れる事故が
+    // 起きたのがその形。いまは tools/build-sw.mjs が配信物の中身から版を作るので、
+    // 見るべきは「目印が残っているか」と「生成器が配線されているか」になった。
     run: (c) => {
       const raw = c.text(c.config.swSource);
       if (raw === null) return ng('sw.js が無い');
       const m = raw.match(/APP_VERSION\s*=\s*['"]([^'"]+)['"]/);
       if (!m) return ng('APP_VERSION が無い');
-      return m[1] === c.config.appVersion
-        ? ok(m[1])
-        : ng(`sw.js は ${m[1]}、config は ${c.config.appVersion}。リリースのたびに上げる`);
+      if (m[1] !== '__APP_VERSION__') {
+        return ng(`APP_VERSION が手書き（${m[1]}）に戻っている。`
+          + "const APP_VERSION = '__APP_VERSION__'; にして、版は tools/build-sw.mjs に作らせること");
+      }
+      if (c.text('tools/build-sw.mjs') === null) {
+        return ng('tools/build-sw.mjs がありません。版の自動生成が外れています');
+      }
+      const pkg = c.text('package.json') || '';
+      if (!/build-sw\.mjs/.test(pkg)) {
+        return ng('package.json の build が tools/build-sw.mjs を呼んでいません。版が据え置きのまま配られます');
+      }
+      return ok('配信物の中身から自動生成');
     }
   },
 

@@ -145,7 +145,7 @@ npm run check:self              # ゲートをわざと壊して、ちゃんと�
 | E8 | 初回訪問で勝手にリロードしない | ✅ | 前 **画面遷移1回** → 後 **1回**（どちらも問題なし。`controllerchange` は利用者が押したときだけ受ける形にしてある） |
 | E9 | Service Worker が実際に登録されている | ✅ | `getRegistration()` で `active: true` を確認。登録は React の外（`src/pwa.js`）で行い、**`readyState` の分岐**を入れてある |
 | E10 | offline.html（外部資産・JS に頼らない） | ✅ | **前：本体の控えを消すと何も出なかった** → 後：`offline.html` が出ることを実測。`<script>` も外部URLも持たない |
-| E11 | APP_VERSION を今回のリリース値に更新 | ✅ | `v2`（`quality.config.json` と一致していることを品質ゲートで検査） |
+| E11 | SW の版が配信物の中身から自動で作られる | ✅ | `tools/build-sw.mjs` が `dist/sw.js` に刻む。手書きに戻す／生成器を消す／`build` の配線を外す、のどれでも品質ゲートが止める（2026-08-22 に自動化。それまでは手書きで、`quality.config.json` の `appVersion` といっしょに上げ忘れれば揃ったまま緑だった） |
 | E12 | maskable のセーフゾーン外の中身 0.2% 以下 | ✅ | 512：**0.012%** / 192：**0.024%**（画素を数えて実測。下地は切り抜かれてよいので中身と色で区別した） |
 | E13 | iOS の「ホーム画面に追加」手順を MANUAL に記載 | ✅ | MANUAL.md に記載 |
 
