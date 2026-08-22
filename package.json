@@ -12,12 +12,13 @@
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",
     "test": "node --test",
-    "check": "node scripts/check-project.mjs",
+    "check": "node tools/check-secrets.mjs && node scripts/check-project.mjs",
     "check:self": "node scripts/check-project.mjs --self-test",
     "measure": "node tools/measure.mjs",
     "measure:update": "node tools/measure-update.mjs",
     "icons": "node scripts/generate-icons.mjs",
-    "serve:dist": "node tools/serve-dist.mjs"
+    "serve:dist": "node tools/serve-dist.mjs",
+    "check:secrets": "node tools/check-secrets.mjs"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",
