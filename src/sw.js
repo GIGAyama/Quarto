@@ -14,7 +14,14 @@
 
 import { CACHE_PREFIX } from './app-cache.js';
 
-const APP_VERSION = 'v4'; // ← リリースごとに必ず上げる
+// ⚠️ この行は手で直さない。`npm run build` のあと tools/build-sw.mjs が
+//    dist/sw.js の版を「配信物の中身のハッシュ」に書き換える。
+//    手書きだったころは quality.config.json の appVersion と揃える決まりだったが、
+//    どちらも手書きなので、いっしょに上げ忘れれば揃ったまま緑になる。
+//    上げ忘れると古いシェルのキャッシュが掃除されず、直した画面が児童の端末に
+//    一度も届かないまま「直したはずなのに直らない」が続く
+//    （2026-08-21、12リポジトリで同時に上げ忘れる事故が実際に起きた）。
+const APP_VERSION = '__APP_VERSION__';
 const CACHE_STATIC = CACHE_PREFIX + 'static-' + APP_VERSION;
 const CACHE_RUNTIME = CACHE_PREFIX + 'runtime-' + APP_VERSION;
 

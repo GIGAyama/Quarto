@@ -180,9 +180,11 @@ const BREAKAGE = {
     ...o,
     text: (p) => (p === o.config.offlineHtml ? '<html><script>location.reload()</script></html>' : o.text(p))
   }),
+  // 版は配信物の中身から作るようになったので、「上げ忘れる」という壊れ方は
+  // もう起こせない。いまの壊れ方は「手書きに戻す」こと
   E11_APP_VERSION: (o) => ({
     ...o,
-    text: (p) => (p === o.config.swSource ? "const APP_VERSION = 'v0';" : o.text(p))
+    text: (p) => (p === o.config.swSource ? "const APP_VERSION = 'v4';" : o.text(p))
   }),
   P1_ICON_SIZES: (o) => ({ ...o, bytes: () => 999 * 1024 }),
   P2_FILE_SIZE: (o) => ({ ...o, text: (p) => (p.endsWith('.jsx') ? 'x\n'.repeat(6000) : o.text(p)) }),

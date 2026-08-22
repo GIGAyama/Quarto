@@ -155,8 +155,15 @@ Playwright を `devDependencies` に入れていないのは、授業で使う�
 
 - **CSP を入れてあります。** インラインの `<script>` と `onclick=` は動きません。
   イベントは `addEventListener` で繋いでください。
-- **`src/sw.js` を直したら `APP_VERSION` を上げ、`quality.config.json` の
-  `appVersion` も合わせてください。** ずれていると `npm run check` が落ちます。
+- **`src/sw.js` の `APP_VERSION` は手で触らないでください。** `npm run build` の
+  あと `tools/build-sw.mjs` が「配信物の中身のハッシュ」に書き換えます。
+  手書きに戻すと `npm run check` が落ちます。
+
+  > 以前は `quality.config.json` の `appVersion` と手で揃える決まりでしたが、
+  > どちらも手書きなので、いっしょに上げ忘れれば揃ったまま緑になりました。
+  > 2026-08-21 に12リポジトリで同時に上げ忘れる事故が起きたのがその形です。
+  > 上げ忘れると古いシェルのキャッシュが掃除されず、直した画面が児童の端末に
+  > 一度も届かないまま「直したはずなのに直らない」が続きます。
 - **アイコンの色や大きさの上限は `quality.config.json` にあります。**
 - 検査を足したときは、`scripts/check-project.mjs` の `BREAKAGE` に
   「わざと壊した入力」も足してください。壊しても落ちない検査は、何も見ていないのと同じです。
