@@ -4,7 +4,6 @@
   "repoBasePath": "./",
   "swSource": "src/sw.js",
   "offlineHtml": "public/offline.html",
-
   "icons": {
     "appleTouchIcon": "public/apple-touch-icon.png",
     "maxKB": {
@@ -16,12 +15,40 @@
       "public/maskable-512x512.png": 60
     }
   },
-
   "performance": {
     "initialJsKB": 300
   },
-
   "knownDeviations": {
     "P3_INITIAL_JS": "3D 盤面に three.js を使っており、three だけで 451KB ある。GIGA Standard v5 §8 の 300KB は満たせない。gzip 後は 196KB。CDN からは 1バイトも取っておらず、すべて自己ホストしたうえで先読みキャッシュに入れてあるため、初回以降は通信が発生しない。three を外すには 3D をやめる（アプリの作り替え）しかないため、人間の判断に委ねる。"
+  },
+  "standard": {
+    "//": "正本 GIGAyama.github.io/standards/lib/giga-v5-checks.mjs に渡す設定。",
+    "repoName": "Quarto",
+    "sw": "vite",
+    "swSource": "src/sw.js",
+    "swVersionConst": "APP_VERSION",
+    "//manifest": "manifest は vite-plugin-pwa が vite.config.js の宣言から作る。原文にはファイルが無いので、ビルド結果を見る。CI も手元も npm run build のあとにゲートを回す（dist が無ければ BUILD_PRESENT が落ちる）",
+    "manifest": "dist/manifest.webmanifest",
+    "//siteRoot": "Vite 型なので public/ の中身が配信の直下に来る。ここを書かないと offline.html とアイコンを「ありません」と誤検知する",
+    "siteRoot": "public",
+    "jsDirs": [
+      "src"
+    ],
+    "cssDirs": [
+      "src"
+    ],
+    "htmlFiles": [
+      "index.html",
+      "public/offline.html"
+    ],
+    "imageDirs": [
+      "public"
+    ],
+    "skips": [
+      {
+        "id": "C_PAGEHIDE",
+        "reason": "1台の端末を2人で囲んで指すアプリで、対局のとちゅうも結果も保存しない（src に localStorage も IndexedDB も1件も無い）。締めて確定する記録が無いので pagehide の出番が無い（2026-08-23）"
+      }
+    ]
   }
 }
