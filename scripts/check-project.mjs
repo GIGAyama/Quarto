@@ -2,291 +2,260 @@
 /*
  * 品質ゲート。
  *
- *   npm run check              … リポジトリを検査する
- *   npm run check -- --self-test … 検査そのものが動いていることを確かめる
+ *   npm run check       … リポジトリを検査する
+ *   npm run check:self  … 検査そのものが動いていることを確かめる
  *
  * ⚠️ 「0件でした」だけでは、検査が動いているのか何も見ていないのか区別できない。
- *    --self-test は各検査に「わざと壊した入力」を与えて、ちゃんと落ちることを見る。
- *    実際にこの確認をしたことで、検査そのものの不具合が見つかっている。
+ *    --self-test は、ファイルを1つずつわざと壊した写しを作り、
+ *    対応する検査がちゃんと落ちることを確かめる。
  *
- * 検査の中身は scripts/lib/giga-v5-checks.mjs にある。
+ * ## 構成
+ *
+ *   scripts/lib/giga-v5-checks.mjs … 共通の検査の【正本のコピー】。
+ *     GIGAyama.github.io/standards/lib/ からのコピーで、ここでは手を入れない。
+ *     直すときは正本を直してから配る（drift ジョブがずれを見張っている）。
+ *   scripts/lib/local-checks.mjs   … このリポジトリだけの検査。
  *
  * ここにはかつて「共通の正本 scripts/lib/project-quality.mjs を受け取れる
  * ようになったら合成する」と書いてあった。その計画は取りやめた
- * （2026-08-22 に艦隊を実測した結果）:
+ * （2026-08-22 に艦隊を実測した結果、3世代に割れていて丸ごと差し替えで
+ * 受けられる形になっていなかった）。共通化は用件ごとの小さな正本で進める。
  *
- *   ・project-quality.mjs は艦隊の8本にコピーがあるが、3世代に割れており
- *     （297行が6本・158行が1本・64行が1本）、export する名前もばらばら
- *     （runQualityChecks / run / 該当なし）。「丸ごと差し替えで受ける」
- *     ことができる形になっていない。
- *   ・それを任意参照していた5本のリポジトリでは、コピーを置いても
- *     検査が1件も増えないか、例外で落ちるかのどちらかだった。
- *     「無ければ素通り」の側は、秘密の直書きを見落とす穴になっていた。
+ * ## ビルドしてから走らせる
  *
- * 共通化は、ひとつの大きな正本ではなく**用件ごとの小さな正本**で進める。
- * いまは次の2つが GIGAyama.github.io/standards/ にある:
- *   standards/lib/giga-v5-checks.mjs … Part I の検査
- *   standards/lib/check-secrets.mjs  … 秘密の直書き（tools/ に配布ずみ）
- * どちらも丸ごと1ファイルで完結し、無ければコマンドごと失敗する。
+ * このアプリは vite-plugin-pwa の injectManifest を使う。manifest も
+ * 先読み一覧もビルド時に作られるので、原文だけでは真偽が決まらない。
+ * dist が無ければ BUILD_PRESENT が落ちる（黙って素通りさせない）。
  */
-import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
-import { join, relative, dirname } from 'node:path';
+import { readFileSync, mkdtempSync, cpSync, writeFileSync, rmSync } from 'node:fs';
+import { join, resolve, dirname } from 'node:path';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { checks } from './lib/giga-v5-checks.mjs';
+import { runGigaChecks } from './lib/giga-v5-checks.mjs';
+import { runLocalChecks, runBuildChecks } from './lib/local-checks.mjs';
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const SELF_TEST = process.argv.includes('--self-test');
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const config = JSON.parse(readFileSync(join(ROOT, 'quality.config.json'), 'utf8'));
 
-// assets/ はアイコンの原本置き場で配布物ではない。dist/assets は検査したいので、
-// ディレクトリ名ではなくリポジトリからの相対パスで除外する。
-const IGNORED = new Set(['node_modules', '.git', 'dev-dist', 'assets']);
+// 正本は { id, title, ok, detail(配列), skipped } を返す。ローカルは
+// { id, ok, detail(文字列), severity }。出力をそろえてから並べる。
+const collect = (root) => [
+  ...runGigaChecks(root, config.standard).map((r) => ({
+    id: r.id,
+    ok: r.ok,
+    skipped: !!r.skipped,
+    // 正本は skipped を true/false で返し、理由は title の末尾に付ける。
+    // r.skipped をそのまま出すと「true」と表示される。
+    detail: r.skipped ? r.title : (r.detail || []).join(' / ') || r.title,
+    severity: 'P1',
+  })),
+  ...runLocalChecks(root).map((r) => ({ ...r, skipped: false })),
+  ...runBuildChecks(root, config).map((r) => ({ ...r, skipped: false })),
+];
 
-function walk(dir, out = []) {
-  for (const name of readdirSync(dir)) {
-    const full = join(dir, name);
-    const rel = relative(ROOT, full);
-    if (IGNORED.has(rel)) continue;
-    const st = statSync(full);
-    if (st.isDirectory()) walk(full, out);
-    else out.push(rel);
+/*
+ * わざと壊す一覧。
+ * 「この壊し方をしたら、この検査が落ちるはず」を書いてある。
+ * 落ちなければ、その検査は何も見ていない。
+ */
+const BREAKS = [
+  {
+    id: 'B_NO_CDN_CODE',
+    file: 'index.html',
+    apply: (s) => s.replace('</head>', '  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>\n  </head>'),
+  },
+  {
+    id: 'D_VIEWPORT',
+    file: 'index.html',
+    apply: (s) => s.replace('viewport-fit=cover', 'viewport-fit=auto'),
+  },
+  {
+    id: 'D_VIEWPORT',
+    file: 'index.html',
+    apply: (s) => s.replace('initial-scale=1', 'initial-scale=1, user-scalable=no'),
+  },
+  {
+    id: 'B_CSP',
+    file: 'index.html',
+    apply: (s) => s.replace("script-src 'self';", "script-src 'self' 'unsafe-inline';"),
+  },
+  {
+    id: 'B_NO_INLINE_SCRIPT',
+    file: 'index.html',
+    apply: (s) => s.replace('</body>', '<script>window.x = 1;</script>\n</body>'),
+  },
+  {
+    id: 'E_INSTALL_HOOK',
+    file: 'index.html',
+    apply: (s) => s.replace('<script src="./install-hook.js"></script>', ''),
+  },
+  {
+    id: 'E3_INSTALL_HOOK_FILE',
+    file: 'public/install-hook.js',
+    remove: true,
+  },
+  {
+    id: 'D_DVH',
+    file: 'src/index.css',
+    // ⚠️ 正本は「前後250文字に 100dvh があれば、古いブラウザ向けの正しい
+    //    ひかえ」と見る。ひかえの無い 100vh を離れた場所に足す形で壊す。
+    apply: (s) => `${s}\n.__selftest { height: 100vh; }\n`,
+  },
+  {
+    id: 'D_SAFE_AREA',
+    file: 'src/index.css',
+    apply: (s) => s.replaceAll('safe-area-inset', 'REMOVED-inset'),
+  },
+  {
+    id: 'D_FLUID_TYPE',
+    file: 'src/index.css',
+    apply: (s) => s.replace(/clamp\([^)]*\)/g, '18px'),
+  },
+  {
+    id: 'D_REDUCED_MOTION',
+    file: 'src/index.css',
+    apply: (s) => s.replaceAll('prefers-reduced-motion', 'prefers-REMOVED'),
+  },
+  {
+    id: 'D_FORCED_COLORS',
+    file: 'src/index.css',
+    apply: (s) => s.replaceAll('forced-colors', 'REMOVED-colors'),
+  },
+  {
+    id: 'E_SW_CACHE_SCOPE',
+    file: 'src/sw.js',
+    // ⚠️ 「消す式」ではなく「startsWith で自アプリ分に絞る式があるか」を見る
+    apply: (s) => s.replace(/k\.startsWith\(CACHE_PREFIX\)/, 'true'),
+  },
+  {
+    id: 'E_SW_NO_LOCALSTORAGE',
+    file: 'src/sw.js',
+    apply: (s) => `${s}\nself.addEventListener('sync', () => { localStorage.setItem('x', 1); });\n`,
+  },
+  {
+    id: 'E_SW_NO_SKIP_WAITING_ON_INSTALL',
+    file: 'src/sw.js',
+    apply: (s) => s.replace("self.addEventListener('install',", "self.addEventListener('install', () => self.skipWaiting());\nself.addEventListener('install',"),
+  },
+  {
+    id: 'E_SW_VERSION_GENERATED',
+    file: 'src/sw.js',
+    // 版を手書きに戻す（目印が消える）
+    apply: (s) => s.replace("const APP_VERSION = '__APP_VERSION__';", "const APP_VERSION = 'v4';"),
+  },
+  {
+    id: 'E_SW_PRECACHE_OFFLINE',
+    file: 'sw-build.config.json',
+    // 先読みをプラグインに任せている宣言を外す
+    apply: (s) => s.replace('"precacheManagedByPlugin": true', '"precacheManagedByPlugin": false'),
+  },
+  {
+    id: 'E_OFFLINE_HTML',
+    file: 'public/offline.html',
+    remove: true,
+  },
+  {
+    id: 'E_OFFLINE_HTML',
+    file: 'public/offline.html',
+    apply: (s) => s.replace('</body>', '  <script>console.log(1)</script>\n  </body>'),
+  },
+  {
+    id: 'C_NO_LS_CLEAR',
+    file: 'src/pwa.js',
+    apply: (s) => `${s}\nexport const reset = () => localStorage.clear();\n`,
+  },
+  {
+    id: 'C_NO_POSTMESSAGE_STAR',
+    file: 'src/pwa.js',
+    apply: (s) => `${s}\nexport const send = (w) => w.postMessage({ a: 1 }, '*');\n`,
+  },
+  {
+    id: 'A_LICENSE',
+    file: 'LICENSE',
+    remove: true,
+  },
+  {
+    id: 'A_DEPENDABOT',
+    file: '.github/dependabot.yml',
+    remove: true,
+  },
+  {
+    id: 'A_DOCS',
+    file: 'MANUAL.md',
+    remove: true,
+  },
+];
+
+const report = (results) => {
+  const failed = results.filter((r) => !r.ok && !r.skipped);
+  const deviated = results.filter((r) => r.deviated);
+  for (const r of results) {
+    const mark = r.skipped ? '－' : r.deviated ? '⚠️ ' : r.ok ? '✅' : '❌';
+    console.log(`${mark} [${r.severity}] ${r.id.padEnd(34)} ${r.detail}`);
   }
-  return out;
-}
-
-// --- 実際のリポジトリから読む文脈 ------------------------------------------
-function realContext() {
-  const files = walk(ROOT);
-  const cache = new Map();
-  const config = JSON.parse(readFileSync(join(ROOT, 'quality.config.json'), 'utf8'));
-
-  return {
-    config,
-    // '.js' のような拡張子はきっちり末尾で一致させる。
-    // 部分一致にすると package-lock.json が '.js' に引っかかる。
-    // ビルド成果物（dist/）は原本ではないので、明示的に dist を指したときだけ含める。
-    list: (pattern) => {
-      const base = pattern && pattern.includes('dist') ? files : files.filter((f) => !f.startsWith('dist/'));
-      if (!pattern) return base;
-      if (/^\.[a-z0-9]+$/i.test(pattern)) return base.filter((f) => f.endsWith(pattern));
-      return base.filter((f) => f.includes(pattern));
-    },
-    has: (p) => existsSync(join(ROOT, p)),
-    bytes: (p) => (existsSync(join(ROOT, p)) ? statSync(join(ROOT, p)).size : null),
-    text: (p) => {
-      if (cache.has(p)) return cache.get(p);
-      const full = join(ROOT, p);
-      const v = existsSync(full) && statSync(full).isFile() ? readFileSync(full, 'utf8') : null;
-      cache.set(p, v);
-      return v;
-    },
-    iconAlpha: (p) => {
-      const full = join(ROOT, p);
-      if (!existsSync(full)) return null;
-      // PNG のヘッダだけを読む。IHDR の colour type が 4 か 6 なら alpha を持つ。
-      // tRNS チャンクがあるパレット PNG も透明を持つ。
-      const buf = readFileSync(full);
-      const colourType = buf[25];
-      const hasAlphaChannel = colourType === 4 || colourType === 6;
-      const hasTrns = buf.includes(Buffer.from('tRNS'));
-      return { hasTransparent: hasAlphaChannel || hasTrns, min: hasAlphaChannel ? 'alpha あり' : hasTrns ? 'tRNS あり' : 255 };
-    }
-  };
-}
-
-// --- わざと壊した文脈 ------------------------------------------------------
-// 各検査 id ごとに「これなら落ちるはず」という入力を用意する。
-const BREAKAGE = {
-  A1_LICENSE: (o) => ({ ...o, has: (p) => (p === 'LICENSE' ? false : o.has(p)) }),
-  A2_GITIGNORE: (o) => ({ ...o, text: (p) => (p === '.gitignore' ? 'node_modules/\n' : o.text(p)) }),
-  A3_DEPENDABOT: (o) => ({ ...o, has: (p) => (p === '.github/dependabot.yml' ? false : o.has(p)) }),
-  A4_DOCS: (o) => ({ ...o, has: (p) => (p === 'MANUAL.md' ? false : o.has(p)) }),
-  A6_TESTS_EXIST: (o) => ({ ...o, list: (g) => (g === '.test.js' ? [] : o.list(g)) }),
-  A5_CI_ON_PR: (o) => ({
-    ...o,
-    text: (p) => (p.startsWith('.github/workflows/') ? 'on:\n  push:\n    branches: [main]\n' : o.text(p))
-  }),
-  B1_CSP: (o) => ({
-    ...o,
-    text: (p) =>
-      p === 'index.html'
-        ? `<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';">`
-        : o.text(p)
-  }),
-  B2_NO_META_FRAME_ANCESTORS: (o) => ({
-    ...o,
-    text: (p) =>
-      p === 'index.html'
-        ? `<meta http-equiv="Content-Security-Policy" content="frame-ancestors 'none';">`
-        : o.text(p)
-  }),
-  B6_NO_CDN_RUNTIME: (o) => ({
-    ...o,
-    text: (p) =>
-      p === 'index.html'
-        ? '<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>'
-        : o.text(p)
-  }),
-  B7_NO_SECRETS: (o) => ({ ...o, list: (g) => o.list(g).concat(['.clasp.json']) }),
-  D1_VIEWPORT: (o) => ({
-    ...o,
-    text: (p) =>
-      p === 'index.html' ? '<meta name="viewport" content="width=device-width, initial-scale=1.0">' : o.text(p)
-  }),
-  D14_NO_SCALE_LOCK: (o) => ({
-    ...o,
-    text: (p) =>
-      p === 'index.html'
-        ? '<meta name="viewport" content="width=device-width, user-scalable=no">'
-        : o.text(p)
-  }),
-  // ⚠️ @supports not (height: 100dvh) の中の 100vh は正しいフォールバック。
-  //    わざと壊すときは「@supports に囲まれていない 100vh」を与える。
-  D2_DVH: (o) => ({
-    ...o,
-    text: (p) => (p.endsWith('.css') ? '.app { height: 100vh; }' : o.text(p))
-  }),
-  D3_SAFE_AREA: (o) => ({ ...o, text: (p) => (/\.(css|jsx|html)$/.test(p) ? '.a{}' : o.text(p)) }),
-  D4_FLUID_TYPE: (o) => ({ ...o, text: (p) => (p.endsWith('.css') ? 'body{font-size:16px}' : o.text(p)) }),
-  D5_CANVAS_DPR: (o) => ({
-    ...o,
-    text: (p) => (p.endsWith('.jsx') ? "const ctx = el.getContext('2d');" : o.text(p))
-  }),
-  D10_REDUCED_MOTION: (o) => ({
-    ...o,
-    text: (p) =>
-      p.endsWith('.css')
-        ? '@media (prefers-reduced-motion: reduce) {\n  * { animation-duration: 0s !important; }\n}'
-        : o.text(p)
-  }),
-  D11_FORCED_COLORS: (o) => ({ ...o, text: (p) => (p.endsWith('.css') ? '.a{}' : o.text(p)) }),
-  F4_RT_COLOR: (o) => ({ ...o, text: (p) => (p.endsWith('.css') ? 'rt { color: #666; }' : o.text(p)) }),
-  E1_MANIFEST_ID: (o) => ({
-    ...o,
-    text: (p) => (p === 'vite.config.js' ? "start_url: './', scope: './'" : o.text(p))
-  }),
-  E2_APPLE_ICON_OPAQUE: (o) => ({ ...o, iconAlpha: () => ({ hasTransparent: true, min: 0 }) }),
-  E3_INSTALL_HOOK: (o) => ({
-    ...o,
-    text: (p) =>
-      p === 'index.html'
-        ? '<head><script type="module" src="/src/main.jsx"></script><script src="./install-hook.js"></script></head>'
-        : o.text(p)
-  }),
-  // ⚠️ 削除式を正規表現で追うと (k) => caches.delete(k) を見落とす。
-  //    見るべきは「startsWith で絞る式があるか」なので、それを外して壊す。
-  E5_SW_CACHE_SCOPE: (o) => ({
-    ...o,
-    text: (p) =>
-      p === o.config.swSource
-        ? "self.addEventListener('activate', async () => { const keys = await caches.keys(); await Promise.all(keys.map((k) => caches.delete(k))); });"
-        : o.text(p)
-  }),
-  E6_SW_NO_LOCALSTORAGE: (o) => ({
-    ...o,
-    text: (p) => (p === o.config.swSource ? "localStorage.setItem('a', '1');" : o.text(p))
-  }),
-  E7_SW_NO_SKIP_WAITING_ON_INSTALL: (o) => ({
-    ...o,
-    text: (p) =>
-      p === o.config.swSource
-        ? "self.addEventListener('install', (e) => { self.skipWaiting(); });\nself.addEventListener('activate', () => {});"
-        : o.text(p)
-  }),
-  E10_OFFLINE_HTML: (o) => ({
-    ...o,
-    text: (p) => (p === o.config.offlineHtml ? '<html><script>location.reload()</script></html>' : o.text(p))
-  }),
-  // 版は配信物の中身から作るようになったので、「上げ忘れる」という壊れ方は
-  // もう起こせない。いまの壊れ方は「手書きに戻す」こと
-  E11_APP_VERSION: (o) => ({
-    ...o,
-    text: (p) => (p === o.config.swSource ? "const APP_VERSION = 'v4';" : o.text(p))
-  }),
-  P1_ICON_SIZES: (o) => ({ ...o, bytes: () => 999 * 1024 }),
-  P2_FILE_SIZE: (o) => ({ ...o, text: (p) => (p.endsWith('.jsx') ? 'x\n'.repeat(6000) : o.text(p)) }),
-  P3_INITIAL_JS: (o) => ({
-    ...o,
-    list: (g) => (g === 'dist/assets/' ? ['dist/assets/a.js'] : o.list(g)),
-    bytes: () => 9_000_000
-  })
+  console.log(`\n${results.length - failed.length - deviated.length} / ${results.length} 件が基準を満たしています`
+    + (deviated.length ? `（既知の逸脱 ${deviated.length} 件。理由は quality.config.json と AUDIT.md）` : ''));
+  return failed;
 };
 
-// ---------------------------------------------------------------------------
-function runSelfTest() {
-  const base = realContext();
-  let failed = 0;
+const selfTest = () => {
+  console.log('== 品質ゲートの自己確認 ==');
+  console.log('ファイルをわざと壊した写しを作り、対応する検査が落ちることを確かめます。\n');
 
-  console.log('検査そのものを、わざと壊した入力で確かめる\n');
-  for (const check of checks) {
-    const breaker = BREAKAGE[check.id];
-    if (!breaker) {
-      console.log(`⚠️  ${check.id.padEnd(34)} わざと壊す入力が用意されていない`);
-      failed++;
-      continue;
-    }
-    let r;
+  const base = collect(ROOT);
+  const baseFailed = base.filter((r) => !r.ok && !r.skipped);
+  if (baseFailed.length) {
+    console.log('⚠️ もとの状態で落ちている検査があります。先にそちらを直してください。');
+    for (const r of baseFailed) console.log(`   ❌ ${r.id} ${r.detail}`);
+    return 1;
+  }
+
+  let bad = 0;
+  for (const brk of BREAKS) {
+    const dir = mkdtempSync(join(tmpdir(), 'giga-selftest-'));
     try {
-      r = check.run(breaker(base));
-    } catch (e) {
-      console.log(`❌ ${check.id.padEnd(34)} 検査が例外で落ちた: ${e.message}`);
-      failed++;
-      continue;
-    }
-    if (r.skip) {
-      console.log(`❌ ${check.id.padEnd(34)} 壊したのに「対象外」と判定された`);
-      failed++;
-    } else if (r.ok) {
-      console.log(`❌ ${check.id.padEnd(34)} 壊したのに通ってしまった（検査が何も見ていない）`);
-      failed++;
-    } else {
-      console.log(`✅ ${check.id.padEnd(34)} 壊すとちゃんと落ちる`);
+      // dist は消さずに写す。ビルド結果を見る検査（BUILD_PRESENT /
+      // E10_OFFLINE_PRECACHED / P3_INITIAL_JS）が「もとの状態で落ちている」に
+      // なってしまうため。
+      cpSync(ROOT, dir, {
+        recursive: true,
+        filter: (src) => !/node_modules|\.git$|\.git\/|dev-dist/.test(src),
+      });
+      const target = join(dir, brk.file);
+      if (brk.remove) {
+        rmSync(target, { force: true });
+      } else {
+        const before = readFileSync(target, 'utf8');
+        const after = brk.apply(before);
+        if (after === before) {
+          console.log(`⚠️ ${brk.id.padEnd(34)} 壊し方が当たっていません（対象の文字列が見つからない）`);
+          bad++;
+          continue;
+        }
+        writeFileSync(target, after);
+      }
+      const results = collect(dir);
+      const hit = results.find((r) => r.id === brk.id);
+      if (!hit) {
+        console.log(`⚠️ ${brk.id.padEnd(34)} そんな検査がありません`);
+        bad++;
+      } else if (hit.ok) {
+        console.log(`❌ ${brk.id.padEnd(34)} 壊したのに落ちませんでした（この検査は何も見ていない）`);
+        bad++;
+      } else {
+        console.log(`✅ ${brk.id.padEnd(34)} 壊したら落ちた`);
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
     }
   }
 
-  console.log(`\n${checks.length - failed}/${checks.length} の検査が、壊したときに落ちることを確認した`);
-  if (failed) process.exitCode = 1;
+  console.log(`\n${BREAKS.length - bad} / ${BREAKS.length} 件の検査が、壊したときに落ちることを確認しました。`);
+  return bad === 0 ? 0 : 1;
+};
+
+if (process.argv.includes('--self-test')) {
+  process.exit(selfTest());
 }
-
-function runChecks() {
-  const ctx = realContext();
-  const deviations = ctx.config.knownDeviations || {};
-  let ng = 0;
-  let skipped = 0;
-  const deviated = [];
-
-  console.log('GIGA Standard v5 品質ゲート\n');
-  for (const check of checks) {
-    let r;
-    try {
-      r = check.run(ctx);
-    } catch (e) {
-      r = { ok: false, detail: `検査が例外で落ちた: ${e.message}` };
-    }
-
-    if (r.skip) {
-      console.log(`➖ [${check.phase}] ${check.title} — ${r.detail}`);
-      skipped++;
-    } else if (r.ok) {
-      console.log(`✅ [${check.phase}] ${check.title} — ${r.detail}`);
-    } else if (deviations[check.id]) {
-      console.log(`⚠️  [${check.phase}] ${check.title} — ${r.detail}`);
-      console.log(`     既知の逸脱: ${deviations[check.id]}`);
-      deviated.push(check.id);
-    } else {
-      console.log(`❌ [${check.phase}] ${check.title} — ${r.detail}`);
-      ng++;
-    }
-  }
-
-  const passed = checks.length - ng - skipped - deviated.length;
-  console.log(
-    `\n満たした ${passed} / 満たしていない ${ng} / 既知の逸脱 ${deviated.length} / 対象外 ${skipped}`
-  );
-  if (deviated.length) {
-    console.log(`既知の逸脱（AUDIT.md に理由を書いてある）: ${deviated.join(', ')}`);
-  }
-  if (ng) process.exitCode = 1;
-}
-
-if (SELF_TEST) runSelfTest();
-else runChecks();
+console.log(`== GIGA Standard v5 品質ゲート（${config.repoName}）==\n`);
+process.exit(report(collect(ROOT)).length === 0 ? 0 : 1);

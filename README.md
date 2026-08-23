@@ -146,7 +146,8 @@ Playwright を `devDependencies` に入れていないのは、授業で使う�
 | `assets/icon-master.png` | アイコンの原本（1024×1024）。**配布物には含めない** |
 | `quality.config.json` | 品質ゲートの設定（版・上限サイズ・既知の逸脱） |
 | `scripts/check-project.mjs` | 品質ゲートの実行と自己テスト（`--self-test`） |
-| `scripts/lib/giga-v5-checks.mjs` | 検査そのものの中身（30項目） |
+| `scripts/lib/giga-v5-checks.mjs` | 共通の検査の【正本のコピー】。直すときは正本（GIGAyama.github.io/standards/lib/）を直して配る |
+| `scripts/lib/local-checks.mjs` | このリポジトリだけの検査（正本に行き先が無かった5件） |
 | `scripts/generate-icons.mjs` | `npm run icons`。アイコン6種類の生成 |
 | `tools/serve-dist.mjs` | `npm run serve:dist`。`dist/` を `/Quarto/` の下で配る簡易サーバー |
 | `tools/measure.mjs`, `tools/measure-update.mjs` | 実ブラウザでの実測（Playwright） |
@@ -165,7 +166,7 @@ Playwright を `devDependencies` に入れていないのは、授業で使う�
   > 上げ忘れると古いシェルのキャッシュが掃除されず、直した画面が児童の端末に
   > 一度も届かないまま「直したはずなのに直らない」が続きます。
 - **アイコンの色や大きさの上限は `quality.config.json` にあります。**
-- 検査を足したときは、`scripts/check-project.mjs` の `BREAKAGE` に
+- 検査を足したときは、`scripts/check-project.mjs` の `BREAKS` に
   「わざと壊した入力」も足してください。壊しても落ちない検査は、何も見ていないのと同じです。
 
 ## 🚢 デプロイ (Deployment)

@@ -36,6 +36,11 @@ jobs:
       - name: Quality gate
         run: npm run check
 
+      # 「0件でした」だけでは、検査が動いているのか何も見ていないのか
+      # 区別できない。わざと壊した写しを作って、落ちることまで見る。
+      - name: 品質ゲート自体の確認（わざと壊す）
+        run: npm run check:self
+
   # 正本（GIGAyama.github.io/standards/）からコピーしたファイルが、
   # 正本の更新に取り残されていないかを見る。standards-map.json が対応表。
   drift:
