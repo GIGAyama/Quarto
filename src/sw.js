@@ -87,7 +87,12 @@ self.addEventListener('fetch', (e) => {
         try {
           return await fetch(req);
         } catch {
+          // まず、その URL 自身の控えを探す。privacy.html / terms.html も
+          // 先読みに入っているので、圏外でも本文を出せる。ここを飛ばすと
+          // どの画面へ行っても index.html（＝盤面）が出てしまう。
+          // "/" のような控えの無い URL は、これまでどおり index.html に落とす。
           return (
+            (await caches.match(req)) ||
             (await caches.match(INDEX_URL)) ||
             (await caches.match(OFFLINE_URL)) ||
             Response.error()

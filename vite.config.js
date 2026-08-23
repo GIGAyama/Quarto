@@ -1,6 +1,10 @@
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+
+// 入口になる HTML。Vite は input に書いたものしか dist へ出さない。
+const page = (name) => fileURLToPath(new URL(name, import.meta.url))
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -64,6 +68,17 @@ export default defineConfig({
   build: {
     chunkSizeWarningLimit: 800,
     rollupOptions: {
+      // ⚠️ privacy.html / terms.html をここに書くこと。
+      //    input を省くと Vite の既定は index.html の 1 本だけで、
+      //    リポジトリ直下に置いた他の HTML は dist に入らない。
+      //    配信されるのは dist なので、リポジトリにファイルがあっても
+      //    quarto.giga-school.com/privacy.html は 404 になる（2026-08-23）。
+      //    この 2 本は giga-school.com のカードから直接リンクされている。
+      input: {
+        main: page('index.html'),
+        privacy: page('privacy.html'),
+        terms: page('terms.html')
+      },
       output: {
         manualChunks: {
           three: ['three'],

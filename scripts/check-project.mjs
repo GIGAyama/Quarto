@@ -160,6 +160,12 @@ const BREAKS = [
     apply: (s) => s.replace('</body>', '  <script>console.log(1)</script>\n  </body>'),
   },
   {
+    // dist を消す（原文ではなく配信物を見る検査なので、写しの dist を壊す）。
+    id: 'SITE_PAGES_BUILT',
+    file: 'dist/privacy.html',
+    remove: true,
+  },
+  {
     id: 'C_NO_LS_CLEAR',
     file: 'src/pwa.js',
     apply: (s) => `${s}\nexport const reset = () => localStorage.clear();\n`,

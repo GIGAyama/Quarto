@@ -140,7 +140,8 @@ Playwright を `devDependencies` に入れていないのは、授業で使う�
 | `src/pwa.js` | Service Worker の登録と「あたらしい ばん が あります」のお知らせ |
 | `src/sw.js` | Service Worker 本体（`injectManifest` でビルドされる） |
 | `index.html` | CSP・viewport・アイコン・`install-hook.js` の読み込み |
-| `vite.config.js` | ビルド設定と PWA マニフェスト（`base: '/Quarto/'`） |
+| `privacy.html`, `terms.html` | プライバシーポリシーと利用規約。単体で完結した HTML（`giga-school.com` のカードから直接リンクされている） |
+| `vite.config.js` | ビルド設定と PWA マニフェスト（`base: './'`）。直下の HTML は `rollupOptions.input` に並べる |
 | `public/install-hook.js` | `beforeinstallprompt` の捕捉。`<head>` の先頭で同期読み込みする |
 | `public/offline.html` | 圏外で本体の控えも無いときに出る画面。外部資産にも JS にも頼らない |
 | `assets/icon-master.png` | アイコンの原本（1024×1024）。**配布物には含めない** |
@@ -165,6 +166,11 @@ Playwright を `devDependencies` に入れていないのは、授業で使う�
   > 2026-08-21 に12リポジトリで同時に上げ忘れる事故が起きたのがその形です。
   > 上げ忘れると古いシェルのキャッシュが掃除されず、直した画面が児童の端末に
   > 一度も届かないまま「直したはずなのに直らない」が続きます。
+- **直下に HTML を足したら `vite.config.js` の `rollupOptions.input` にも足してください。**
+  Vite は `input` に書いたものしか `dist/` へ出しません。配信されるのは `dist/` なので、
+  書き忘れるとリポジトリにファイルがあるのに公開先だけ 404 になります
+  （2026-08-23、`privacy.html` と `terms.html` が丸ごと落ちていました）。
+  `npm run check` の `SITE_PAGES_BUILT` がこれを見張っています。
 - **アイコンの色や大きさの上限は `quality.config.json` にあります。**
 - 検査を足したときは、`scripts/check-project.mjs` の `BREAKS` に
   「わざと壊した入力」も足してください。壊しても落ちない検査は、何も見ていないのと同じです。
