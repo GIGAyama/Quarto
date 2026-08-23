@@ -85,6 +85,18 @@ export function runBuildChecks(root, config) {
       ok ? '注入された先読みに入っています' : '注入された先読みに offline.html がありません（圏外では出せません）');
   }
 
+  // 直下に置いた HTML が、実際に配信物へ入ったか。
+  // ⚠️ Vite は vite.config.js の rollupOptions.input に書いたものしか出さない。
+  //    書き忘れると、リポジトリにファイルがあるのに公開先だけ 404 になる
+  //    （2026-08-23、privacy.html と terms.html が丸ごと落ちていた）。
+  //    この 2 本は giga-school.com のカードから直接リンクされている。
+  const pages = ['privacy.html', 'terms.html'];
+  const missing = pages.filter((f) => !existsSync(join(dist, f)));
+  add('SITE_PAGES_BUILT', missing.length === 0,
+    missing.length === 0
+      ? pages.join(' / ')
+      : `dist に ${missing.join(' / ')} がありません（vite.config.js の rollupOptions.input を確認）`);
+
   // 初回に要る JavaScript の量。既知の逸脱は quality.config.json に理由つきで書く。
   const total = walk(join(dist, 'assets'))
     .filter((p) => extname(p) === '.js')
