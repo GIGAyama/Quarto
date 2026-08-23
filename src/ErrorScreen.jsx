@@ -12,9 +12,8 @@
  *    別のファイル（CSS の束）が届いていることを前提にしてはいけない。
  */
 import { Component } from 'react';
-import { CACHE_PREFIX } from './app-cache.js';
+import { CACHE_PREFIX, ownsScope } from './app-cache.js';
 
-const BASE = import.meta.env.BASE_URL;
 const YELLOW = '#ffca28';
 const BROWN = '#5d4037';
 
@@ -32,7 +31,7 @@ async function clearAppData() {
       const registrations = await navigator.serviceWorker.getRegistrations();
       await Promise.all(
         registrations
-          .filter((r) => new URL(r.scope).pathname.startsWith(BASE))
+          .filter((r) => ownsScope(r.scope, import.meta.env.BASE_URL, location.href))
           .map((r) => r.unregister())
       );
     }

@@ -2,7 +2,7 @@
  * 実ブラウザでの実測（GIGA Standard v5 §7）。読むだけでは分からないものを測る。
  *
  *   npm run build
- *   node tools/serve-dist.mjs &            # dist/ を /Quarto/ の下で配る
+ *   node tools/serve-dist.mjs &            # dist/ を本番と同じ階層で配る
  *   npm i -D playwright                    # ← このリポジトリの依存には入れていない
  *   node tools/measure.mjs
  *

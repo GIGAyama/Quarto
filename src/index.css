@@ -1,8 +1,13 @@
 /* Google Fonts は「見た目だけ」の依存なので CDN のまま許容する（GIGA Standard v5 §2-7）。
-   学校のフィルタリングで fonts.googleapis.com が塞がれても、字の形が変わるだけで
-   アプリは動く。届かなかったときのために、端末側の日本語フォントを必ず後ろに並べる。
-   なお実行コード（React / three.js / SweetAlert2）は 1バイトも CDN から取らない。 */
-@import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap');
+   なお実行コード（React / three.js / SweetAlert2）は 1バイトも CDN から取らない。
+
+   ⚠️ ここに @import で書かないこと。
+      @import はこの束ねた CSS の先頭に残り、その CSS は <head> の
+      <link rel="stylesheet"> として配られる。ブラウザは読み込み中の
+      スタイルシートがある間 module script を実行しないので、
+      fonts.googleapis.com が「無応答」で塞がれるとアプリが起動しなくなる。
+      読み込みは src/font.js が起動を止めない形で行う（経緯もそちらに書いた）。
+      届かなかったときのために、端末側の日本語フォントを必ず後ろに並べる。 */
 
 @tailwind base;
 @tailwind components;
