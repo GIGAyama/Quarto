@@ -135,6 +135,16 @@
         margin: 20px 0 0;
         text-align: left;
       }
+      /* 起動できなかった事情の置き場。install-hook.js が 12秒後に書き込む。
+         空のままなら何も見えない（高さも持たない）。 */
+      .boot-fallback__detail {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+        margin: 10px 0 0;
+        opacity: .85;
+        overflow-wrap: break-word;
+        text-align: left;
+      }
     </style>
   </head>
   <body>
@@ -151,6 +161,7 @@
             設定の「閲覧履歴データの削除 → キャッシュされた画像とファイル」をお試しください。
             アプリとして入れている場合は、いったん削除して入れ直すと直ります。
           </p>
+          <p class="boot-fallback__detail" id="boot-detail"></p>
         </div>
       </div>
     </div>

@@ -75,7 +75,7 @@ const buttonBase = {
   padding: '10px 24px'
 };
 
-export function ErrorScreen({ kind = 'unknown' }) {
+export function ErrorScreen({ kind = 'unknown', detail = '' }) {
   const message = MESSAGES[kind] || MESSAGES.unknown;
 
   return (
@@ -155,6 +155,27 @@ export function ErrorScreen({ kind = 'unknown' }) {
         >
           {message.hint}
         </p>
+
+        {/* ⚠️ 何が起きたのかを画面にも残す。
+            児童には読めなくてよいが、これが無いと先生から届く報せは
+            「エラー画面が出る」だけになり、原因の切り分けができない。
+            開発者ツールを開けない端末（配付されたタブレットなど）では、
+            画面に出ていることが唯一の手がかりになる。 */}
+        {detail ? (
+          <p
+            style={{
+              color: BROWN,
+              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+              fontSize: '12px',
+              margin: '10px 0 0',
+              opacity: 0.85,
+              overflowWrap: 'break-word',
+              textAlign: 'left'
+            }}
+          >
+            {detail}
+          </p>
+        ) : null}
       </div>
     </div>
   );

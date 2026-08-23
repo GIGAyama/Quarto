@@ -20,10 +20,62 @@ import {
 function canUseWebGL() {
   try {
     const canvas = document.createElement('canvas');
-    return Boolean(canvas.getContext('webgl2') || canvas.getContext('webgl'));
+    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+    if (!gl) return false;
+    // ⚠️ 確かめただけの context も、端末が数えている「同時に持てる WebGL」の
+    //    1つを占める。Android の安い端末はこの上限が小さく、放っておくと
+    //    「調べただけ」で本番のぶんが作れなくなる。必ず手放す。
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
+    return true;
   } catch {
     return false;
   }
+}
+
+/*
+ * WebGL のレンダラを作る。断られたら、注文を減らしながら作り直す。
+ *
+ * ⚠️ 端末は「WebGL が使えるか」と「そのオプションで使えるか」を別々に答える。
+ *    three.js の例外もそこを区別していて、
+ *      Error creating WebGL context with your selected attributes.
+ *    は「WebGL は使えるが、頼んだオプションが通らない」という意味である。
+ *    Android では powerPreference: 'high-performance' や antialias が
+ *    まさにこれで断られることがある。
+ *
+ * ⚠️ この2つは「あれば嬉しい」だけで、無くても遊べる。
+ *    見た目のために盤面ごと出ないほうが、はるかに困る。
+ *    断られたぶんを諦めて、いちばん素朴な注文まで下りる。
+ *
+ * ⚠️ canUseWebGL() で「使える」と出たのにここが全滅すると、利用者には
+ *    🧩「うまく ひらけませんでした」しか出ず、原因が画面に残らない。
+ *    2026-08-23 に Android で実際にそうなった。最後の例外は呼び出し元へ返し、
+ *    先生向けの手がかりとして画面に出す。
+ */
+const RENDERER_OPTIONS = [
+  // ふだんはこれ。いちばんきれいで速い
+  { antialias: true, alpha: true, powerPreference: 'high-performance' },
+  // GPU の選り好みをやめる
+  { antialias: true, alpha: true },
+  // 縁のなめらかさを諦める（memory の足りない端末で通ることがある）
+  { antialias: false, alpha: true },
+  // 型抜き用の面も要らないと伝える。いちばん軽い注文
+  { antialias: false, alpha: true, stencil: false, depth: true }
+];
+// ⚠️ alpha はここを false にしても意味がない。three.js は透過を自前で扱うため、
+//    端末へ渡す注文では alpha: true を決め打ちする（r152 以降）。
+//    「alpha を諦める」段は作れないので、並べても嘘になる。
+
+function createRenderer() {
+  let lastError;
+  for (const options of RENDERER_OPTIONS) {
+    try {
+      return new THREE.WebGLRenderer(options);
+    } catch (err) {
+      lastError = err;
+      console.warn('[app] この注文では 3D を用意できませんでした', options, err);
+    }
+  }
+  throw lastError;
 }
 
 // ==========================================
@@ -95,11 +147,7 @@ class Game3DEngine {
     this.camera.position.set(0, 18, 16);
     this.camera.lookAt(0, 0, 0);
 
-    this.renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: true,
-      powerPreference: 'high-performance'
-    });
+    this.renderer = createRenderer();
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(width, height);
     this.renderer.shadowMap.enabled = true;
@@ -555,7 +603,12 @@ export default function App() {
         //    3D が用意できないことは分かっているので、事情を書いた画面に差し替える。
         console.error('[app] 3D の盤面を用意できませんでした', err);
         engineRef.current = null;
-        setInitError(canUseWebGL() ? 'unknown' : 'webgl');
+        // 何が起きたかを画面にも残す。ここが空だと、利用者から届くのは
+        // 「エラー画面が出る」だけになり、原因の切り分けに何往復もかかる。
+        setInitError({
+          kind: canUseWebGL() ? 'unknown' : 'webgl',
+          detail: err && err.message ? String(err.message) : String(err)
+        });
       }
     }
     return () => {
@@ -794,7 +847,7 @@ export default function App() {
 
   // ⚠️ この分岐は必ず全てのフックを呼んだあとに置く。
   //    先に return すると呼ばれるフックの数が回によって変わり、React が壊れる。
-  if (initError) return <ErrorScreen kind={initError} />;
+  if (initError) return <ErrorScreen kind={initError.kind} detail={initError.detail} />;
 
   return (
     <>
