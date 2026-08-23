@@ -1,10 +1,11 @@
 /*
- * 検査用の簡易サーバー。dist/ を本番と同じ /Quarto/ の下に置いて配る。
+ * 検査用の簡易サーバー。dist/ を本番と同じ階層に置いて配る。
  *
  *   node tools/serve-dist.mjs [ポート]
  *
- * base が '/Quarto/' なので、ルート直下で配ると資産の URL が全部ずれて
- * 「壊れている」ように見える。本番と同じ階層に置くのが要点。
+ * 本番（quarto.giga-school.com）はドメイン直下なので BASE も '/' にしてある。
+ * 配る階層が本番とずれると資産の URL が全部ずれて「壊れている」ように見えるので、
+ * 本番と同じ階層に置くのが要点。
  */
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
@@ -36,7 +37,11 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   let pathname = decodeURIComponent(url.pathname);
 
-  if (pathname === '/') {
+  // BASE が '/' のときにここで飛ばすと、飛ばした先がまた '/' になり、
+  // ブラウザは ERR_TOO_MANY_REDIRECTS で止まる。
+  // 「アプリが開けない・エラー画面が出る」ように見えるが、原因はこのサーバー側にある。
+  // BASE を '/Quarto/' のような下の階層へ戻したときだけ、入口へ案内する。
+  if (BASE !== '/' && pathname === '/') {
     res.writeHead(302, { Location: BASE });
     res.end();
     return;
