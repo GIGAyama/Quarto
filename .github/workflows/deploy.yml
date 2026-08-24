@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # ⚠️ Pages の「配信元」が Deploy from a branch のままだと、GitHub が
       #    自前で pages build and deployment を走らせ、リポジトリ直下
