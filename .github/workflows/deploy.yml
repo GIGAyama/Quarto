@@ -21,6 +21,40 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # ⚠️ Pages の「配信元」が Deploy from a branch のままだと、GitHub が
+      #    自前で pages build and deployment を走らせ、リポジトリ直下
+      #    （＝ビルド前の原文）を同じ公開先へ配る。この workflow と競走になり、
+      #    あとに終わったほうが勝つ。
+      #
+      #    原文の index.html は /src/main.jsx を指している。ブラウザは
+      #    text/jsx を module として読めないので、React は一度も動かず、
+      #    利用者には待避画面の「うまく ひらけませんでした」しか出ない。
+      #    install-hook.js と favicon.png は public/ にあるためルート直下では
+      #    404 になる（2026-08-23、この形で数日ぶんの調査を空振りさせた）。
+      #
+      #    どちらのデプロイも成功と出るので、緑のまま壊れる。ここで止める。
+      #    直し方は Settings → Pages → Build and deployment → Source を
+      #    「GitHub Actions」にすること。
+      #
+      #    問い合わせ自体が失敗したときは止めない。権限や API の一時的な
+      #    不調で配信そのものを巻き添えにしないため、判定できたときだけ落とす。
+      - name: Pages の配信元が GitHub Actions か確かめる
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if ! build_type=$(gh api "repos/${GITHUB_REPOSITORY}/pages" --jq .build_type 2>/dev/null); then
+            echo "::warning::Pages の設定を読めませんでした。配信元の確認は飛ばします。"
+            exit 0
+          fi
+          echo "build_type = ${build_type}"
+          if [ "${build_type}" != "workflow" ]; then
+            echo "::error::Pages の配信元が '${build_type}' になっています（想定は 'workflow'）。"
+            echo "::error::このままだと GitHub の pages build and deployment がビルド前の原文を"
+            echo "::error::同じ公開先へ配り、この workflow と競走してアプリが起動しなくなります。"
+            echo "::error::Settings → Pages → Build and deployment → Source を GitHub Actions にしてください。"
+            exit 1
+          fi
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:

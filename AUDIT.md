@@ -312,6 +312,51 @@ three.js の例外もそこを区別している。
 Android の安い端末は同時に持てる WebGL の数が少なく、放っておくと
 「調べただけ」で本番のぶんを圧迫する。
 
+### 結末：本当の原因は配信の設定だった（同日）
+
+上の4件を直しても直らなかった。届いたコンソールの出力で決着した。
+
+```
+install-hook.js:1  Failed to load resource: 404
+main.jsx:1  Failed to load module script: Expected a JavaScript-or-Wasm module
+            script but the server responded with a MIME type of "text/jsx".
+/favicon.png:1  Failed to load resource: 404
+```
+
+**配信されていたのは `dist/` ではなく、リポジトリ直下の原文だった。**
+
+- `main.jsx` を要求している ＝ ビルド後の `index.html` ではない
+  （ビルド後は `/assets/main-*.js` を指す）
+- `install-hook.js` と `favicon.png` が 404 ＝ これらは `public/` にあり、
+  ルート直下に来るのは `dist` を配ったときだけ
+
+原因は GitHub Pages の**配信元が「Deploy from a branch」のままだった**こと。
+Actions の一覧に `pages build and deployment`（`event: dynamic`）が
+毎回走っており、これは配信元がブランチのときにだけ現れる。
+
+つまり同じ公開先へ**2つのデプロイが競走していた**。
+
+| | 配信するもの | 直近の完了 |
+|---|---|:--:|
+| `Deploy to GitHub Pages`（このリポジトリの workflow） | `dist/` | 12:09:32 |
+| `pages build and deployment`（GitHub の自動ビルド） | **リポジトリ直下の原文** | **12:09:36** ← 後勝ち |
+
+**どちらも「成功」と出る。** CI も緑、デプロイも緑、それでもアプリは起動しない。
+この repo が何度も踏んでいる「緑のまま壊れる」の一種で、いちばん質が悪い形だった。
+
+直し方は Settings → Pages → Build and deployment → Source を
+**GitHub Actions** にすること。設定の変更なのでコードでは直せない。
+
+そのかわり、`deploy.yml` の先頭で配信元を確かめ、`workflow` でなければ
+はっきり落とすようにした。次に誰かが戻しても、静かに壊れることはない。
+問い合わせ自体に失敗したときは止めない（権限や API の一時的な不調で
+配信を巻き添えにしないため、判定できたときだけ落とす）。
+
+**この4件は、いずれも実在する不具合だった。ただし利用者が見ていた画面の
+原因ではなかった。** 手元のビルドで再現しない症状を、手元のビルドだけで
+追い続けたのが遠回りの理由である。配信物そのものを取りに行けない環境では、
+まず「配信されているのは本当にビルド結果か」を疑うこと。
+
 ### 画面に理由を出すようにした
 
 この不具合の切り分けに何往復もかかったのは、**どちらの 🧩 なのかが画面から
