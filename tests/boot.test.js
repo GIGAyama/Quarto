@@ -15,7 +15,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const read = (rel) => readFileSync(fileURLToPath(new URL(rel, import.meta.url)), 'utf8');
@@ -36,20 +36,42 @@ test('index.css に、外部を指す @import がない', () => {
   );
 });
 
-test('Web フォントは、起動を止めない足し方（media=print → all）で読み込む', () => {
-  const js = read('../src/font.js');
-  assert.match(js, /fonts\.googleapis\.com/, 'フォントの読み込み先がここにある');
-  assert.match(js, /media\s*=\s*'print'/, '届くまでは印刷用あつかいにして描画も script も止めない');
-  assert.match(js, /media\s*=\s*'all'/, '届いてから適用する');
+/*
+ * ⚠️ ここには以前、src/font.js（media="print" で足して load 後に差し替える
+ *    40 行の回避策）を見張るテストが 2 件あった。書体を自分のところから
+ *    配るようになり、回避する相手そのものが消えたので font.js ごと削除した。
+ *    見張る対象を「回避策が正しいか」から「そもそも外へ出ていないか」に
+ *    差し替える。こちらのほうが強い条件になる。
+ */
+
+test('書体は自分のところから配る（生成した fonts.css に外部が無い）', () => {
+  const css = read('../src/fonts.css');
+  assert.match(css, /@font-face/, '@font-face が無い（生成し直していない？）');
+  assert.match(css, /url\('\/fonts\//, '自分のところの woff2 を指していない');
+  assert.equal(
+    /fonts\.googleapis\.com|fonts\.gstatic\.com/.test(css),
+    false,
+    '生成物に外部への参照が残っている',
+  );
 });
 
-test('フォントの読み込みは load のあと（Service Worker の登録を止めない）', () => {
-  const js = read('../src/font.js');
-  // 読み込み中のスタイルシートがあると load は発火しない。
-  // 先に足すと、無応答のときに load が来ず、それを待っている
-  // src/pwa.js の Service Worker 登録が黙って行われないままになる。
-  assert.match(js, /readyState === 'complete'/);
-  assert.match(js, /addEventListener\('load'/);
+test('src/ のどこからも、実行時に Google Fonts を読んでいない', () => {
+  // 回避策を消したあとで、うっかり戻すのを止める見張り。
+  const dir = fileURLToPath(new URL('../src', import.meta.url));
+  const walk = (d) =>
+    readdirSync(d, { withFileTypes: true }).flatMap((e) =>
+      e.isDirectory() ? walk(`${d}/${e.name}`) : [`${d}/${e.name}`],
+    );
+  const offenders = walk(dir)
+    .filter((f) => /\.(js|jsx|css)$/.test(f))
+    .filter((f) => {
+      const body = readFileSync(f, 'utf8')
+        // 経緯を書いたコメントは対象外。見るのは実際に読みにいく行だけ
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '');
+      return /fonts\.(googleapis|gstatic)\.com/.test(body);
+    });
+  assert.deepEqual(offenders, [], '実行時に Google Fonts を読んでいるファイルがある');
 });
 
 test('index.html が外部のスタイルシートを直に読み込んでいない', () => {
