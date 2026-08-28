@@ -10,8 +10,9 @@
         インラインの <script> や onclick= を足すと、この指定のせいで黙って動かなくなる。
         'unsafe-inline' で解決してはいけない（CSP を入れた意味がほとんど無くなる）。
       ・style-src に 'unsafe-inline' が要る … SweetAlert2 が実行時に <style> を差し込むため。
-      ・fonts.googleapis.com / fonts.gstatic.com … 表示用の Web フォント（§2-7）。
-        塞がれても端末側のフォントに落ちるだけでアプリは動く。
+      ・font-src 'self' … 書体は public/fonts/ から自分で配る。以前はここに
+        Google Fonts を許していたが、塞がれ方によってはアプリが起動しなくなった
+        （2026-08-23）。外から読まなくなったので、この行は要らなくなった。
       ・connect-src 'self' … このアプリは外部に一切通信しない。
 
       frame-ancestors はここには書かない。<meta> で配ると無視され、
@@ -24,8 +25,8 @@
       content="
         default-src 'self';
         script-src 'self';
-        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-        font-src 'self' https://fonts.gstatic.com;
+        style-src 'self' 'unsafe-inline';
+        font-src 'self';
         img-src 'self' data: blob:;
         connect-src 'self';
         worker-src 'self';

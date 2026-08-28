@@ -1,13 +1,17 @@
 /* Google Fonts は「見た目だけ」の依存なので CDN のまま許容する（GIGA Standard v5 §2-7）。
    なお実行コード（React / three.js / SweetAlert2）は 1バイトも CDN から取らない。
 
-   ⚠️ ここに @import で書かないこと。
-      @import はこの束ねた CSS の先頭に残り、その CSS は <head> の
-      <link rel="stylesheet"> として配られる。ブラウザは読み込み中の
-      スタイルシートがある間 module script を実行しないので、
-      fonts.googleapis.com が「無応答」で塞がれるとアプリが起動しなくなる。
-      読み込みは src/font.js が起動を止めない形で行う（経緯もそちらに書いた）。
-      届かなかったときのために、端末側の日本語フォントを必ず後ろに並べる。 */
+   書体は public/fonts/ から自分で配る（src/fonts.css は生成物。
+      src/main.jsx が読む）。以前は fonts.googleapis.com から実行時に読んでいて、
+      「無応答」で塞がれるとアプリが起動しなくなっていた（2026-08-23）。
+      その回避策だった src/font.js は、回避する相手が消えたので削除した。
+
+      ⚠️ それでも、ここに外部への @import を書かないこと。@import はこの束ねた
+      CSS の先頭に残り、ブラウザは読み込み中のスタイルシートがある間
+      module script を実行しないので、同じ止まり方に戻る。
+
+      収録していない字は unicode-range の働きで下の端末フォントへ落ちる。
+      書体が変わるだけで □（豆腐）にはならないので、並びは残しておく。 */
 
 @tailwind base;
 @tailwind components;
