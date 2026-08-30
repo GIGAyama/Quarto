@@ -953,8 +953,27 @@ export default function App() {
 
           {/* 4. フッター (固定) */}
           {/* リンクは既定だと 35×11px しかないので、tap-44 で当たり判定だけを広げる */}
-          <footer className="app-footer safe-bottom text-center text-gray-600 py-1.5 border-t border-gray-200 bg-white pointer-events-auto flex-shrink-0">
-            <small className="font-medium" style={{ fontSize: 'var(--fs-small)' }}>© 2026 GIGAクアルト！ <a href="https://giga-school.com" target="_blank" rel="noreferrer" className="tap-44 inline-block text-gray-600 no-underline hover:text-blue-700">GIGA山</a>{' '}<a href="https://giga-school.com/apps/quarto/" target="_blank" rel="noopener noreferrer" className="tap-44 inline-block text-gray-600 no-underline hover:text-blue-700">使い方を読む</a></small>
+          {/* ⚠️ 1 行に収める。flex-nowrap と min-w-0 の 2 つが要る。nowrap だけだと、
+              クレジットの文字列が縮まずに列を押し広げて横スクロールになる。
+              狭い画面ではクレジットが … で切れる。ここが太ると、そのぶん盤が狭くなる。 */}
+          <footer className="app-footer safe-bottom flex flex-nowrap items-center justify-center gap-1 text-center text-gray-600 py-1 border-t border-gray-200 bg-white pointer-events-auto flex-shrink-0">
+            <small className="font-medium min-w-0 truncate" style={{ fontSize: 'var(--fs-small)' }}>© 2026 GIGAクアルト！ <a href="https://giga-school.com" target="_blank" rel="noreferrer" className="tap-44 inline-block text-gray-600 no-underline hover:text-blue-700">GIGA山</a></small>
+            {/* ⚠️ 行き先のリンクを手で書かないこと。中身は正本の部品
+                standards/web/giga-app-links.js（配布物 public/giga-app-links.js）が
+                この中に出す。文言も並びも行き先も、あちらで決まっている。
+                押しどころは部品の側で 48px を確保している（tap-44 より広い）。
+
+                ⚠️ ここにあった「使い方を読む」（紹介記事へのリンク）は外した。
+                   紹介記事は「なぜ作ったか」を、まだ使っていない先生に向けて
+                   書いたもので、いま画面の前で困っている人が求めるものではない。
+                   艦隊のほかのアプリでも既に外れている。
+
+                ⚠️ <div> にしないこと。そこで改行が入ってフッターが 2 行になる。
+
+                ⚠️ data-links で「つかいかた」を外してある。このアプリにはまだ
+                   docs/manual/ が無く、既定のまま出すと行き止まりのリンクになる。
+                   マニュアルを書いたら、この属性ごと消すこと。 */}
+            <span data-giga-links data-links="terms,privacy" />
           </footer>
         </div>
 
